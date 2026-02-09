@@ -3,25 +3,30 @@ import { useEffect, useState } from "react";
 import sdk from "@farcaster/frame-sdk";
 
 export default function Home() {
+  // --- EKSİK TANIMLAMALAR BURADA DÜZELTİLDİ ---
+  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [context, setContext] = useState<any>(null);
   const [city, setCity] = useState("");
+  const [talents, setTalents] = useState(""); // TextArea için ekledim
+  const [status, setStatus] = useState("");   // Status mesajları için ekledim
 
   useEffect(() => {
     const load = async () => {
       try {
         const ctx = await sdk.context;
         setContext(ctx);
-        // Important: ready() must be called to hide the splash screen [1]
+        // SDK hazır olduğunda splash screen'i kapatır
         sdk.actions.ready();
       } catch (e) {
         console.error("SDK Initialization Error:", e);
       }
     };
-    if (sdk &&!isSDKLoaded) {
+
+    if (sdk && !isSDKLoaded) {
       setIsSDKLoaded(true);
       load();
     }
-  },);
+  }, [isSDKLoaded]); // Bağımlılık dizisi eklendi
 
   const handleJoinNetwork = async () => {
     if (!context?.user?.fid) {
@@ -31,14 +36,14 @@ export default function Home() {
 
     setStatus("Requesting signature...");
     try {
-      // 1. Get a secure nonce from your backend
+      // 1. Backend'den nonce al
       const nonceRes = await fetch("/api/auth/nonce");
       const { nonce } = await nonceRes.json();
 
-      // 2. Open the native Farcaster sign-in window
+      // 2. Farcaster imza penceresini aç
       const { message, signature } = await sdk.actions.signIn({ nonce });
 
-      // 3. Send signature and profile data to backend for Neynar verification
+      // 3. Verileri backend'e gönder
       setStatus("Verifying...");
       const res = await fetch("/api/profile", {
         method: "POST",
@@ -51,7 +56,7 @@ export default function Home() {
           username: context.user.username,
           pfp: context.user.pfpUrl,
           city,
-          talents
+          talents // Artık tanımlı
         }),
       });
 
@@ -59,7 +64,7 @@ export default function Home() {
         setStatus("Success! Welcome to Houra. ✅");
       } else {
         const errorData = await res.json();
-       setStatus(`Error: ${errorData.error || "Verification failed."}`);
+        setStatus(`Error: ${errorData.error || "Verification failed."}`);
       }
     } catch (e) {
       console.error(e);
@@ -68,40 +73,73 @@ export default function Home() {
   };
 
   if (!isSDKLoaded) {
-    return <div style={{ backgroundColor: '#000', color: '#fff', padding: '50px' }}>Loading Time Bank...</div>;
+    return (
+      <div style={{ backgroundColor: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>
+        Loading Time Bank...
+      </div>
+    );
   }
 
   return (
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px' }}>
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
       <h1>Houra Connect</h1>
-      <p>Time Bank on Optimism</p>
+      <p style={{ color: '#9ca3af' }}>Time Bank on Optimism</p>
 
       {/* Profile Section */}
-      <div style={{ margin: '20px 0', padding: '15px', borderRadius: '15px', background: '#18181b' }}>
-        <img src={context?.user?.pfpUrl} style={{ width: '50px', borderRadius: '50%' }} />
-        <p>@{context?.user?.username} (FID: {context?.user?.fid})</p>
+      <div style={{ margin: '20px 0', padding: '15px', borderRadius: '15px', background: '#18181b', display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <img src={context?.user?.pfpUrl} style={{ width: '50px', height: '50px', borderRadius: '50%' }} alt="pfp" />
+        <div>
+          <p style={{ margin: 0, fontWeight: 'bold' }}>@{context?.user?.username}</p>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>FID: {context?.user?.fid}</p>
+        </div>
       </div>
 
       {/* Input Fields */}
-      <input 
-        placeholder="City" 
-        onChange={(e) => setCity(e.target.value)}
-        style={{ width: '100%', padding: '10px', margin: '10px 0', color: '#000' }}
-      />
-      <textarea 
-        placeholder="Your Talents (e.g. Coding, Gardening)" 
-        onChange={(e) => setTalents(e.target.value)}
-        style={{ width: '100%', padding: '10px', height: '80px', color: '#000' }}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <input 
+          placeholder="City" 
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3f3f46', background: '#fff', color: '#000' }}
+        />
+        <textarea 
+          placeholder="Your Talents (e.g. Coding, Gardening)" 
+          value={talents}
+          onChange={(e) => setTalents(e.target.value)}
+          style={{ width: '100%', padding: '12px', height: '80px', borderRadius: '8px', border: '1px solid #3f3f46', background: '#fff', color: '#000' }}
+        />
 
-      <button 
-        onClick={handleJoinNetwork}
-        style={{ width: '100%', padding: '15px', background: '#2563eb', fontWeight: 'bold', border: 'none', borderRadius: '10px' }}
-      >
-        JOIN NETWORK
-      </button>
+        <button 
+          onClick={handleJoinNetwork}
+          style={{ 
+            width: '100%', 
+            padding: '15px', 
+            background: '#2563eb', 
+            color: '#fff',
+            fontWeight: 'bold', 
+            border: 'none', 
+            borderRadius: '10px',
+            cursor: 'pointer',
+            marginTop: '10px'
+          }}
+        >
+          JOIN NETWORK
+        </button>
+      </div>
 
-      {status && <p style={{ marginTop: '15px', color: '#60a5fa' }}>{status}</p>}
+      {status && (
+        <div style={{ 
+          marginTop: '20px', 
+          padding: '10px', 
+          borderRadius: '8px', 
+          background: status.includes('Success') ? '#064e3b' : '#450a0a',
+          color: status.includes('Success') ? '#34d399' : '#f87171',
+          fontSize: '0.9rem',
+          textAlign: 'center'
+        }}>
+          {status}
+        </div>
+      )}
     </div>
   );
 }

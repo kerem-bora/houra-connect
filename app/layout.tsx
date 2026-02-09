@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     images: ["https://houra.vercel.app/splash.png"], // Paylaşıldığında görünecek resim
   },
   other: {
+    "base:app_id": "6989dfad73cda529e5cd6898",
     // Farcaster Frame v2 Meta Etiketleri
     "fc:frame": JSON.stringify({
       version: "next",

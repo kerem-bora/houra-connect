@@ -11,6 +11,16 @@
     "homeUrl": "https://houra.vercel.app",
     "imageUrl": "https://houra.vercel.app/splash.png",
     "buttonTitle": "Connect",
-    "webhookUrl": "https://houra.vercel.app/api/webhook"
+    "webhookUrl": "https://houra.vercel.app/api/webhook",
+    "splashImageUrl": "https://houra.vercel.app/splash.png",
+    "splashBackgroundColor": "#000000",
+    "primaryCategory": "social",
+    "tags": [
+      "houra",
+      "time bank",
+      "alternative economy",
+      "solidarity",
+      "social"
+    ]
   }
 }

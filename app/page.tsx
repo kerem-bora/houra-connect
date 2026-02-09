@@ -1,3 +1,4 @@
+<meta name="base:app_id" content="6989dfad73cda529e5cd6898" />
 "use client";
 import { useEffect, useState } from "react";
 import sdk from "@farcaster/frame-sdk";

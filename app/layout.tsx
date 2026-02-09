@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Houra Connect",
   description: "Farcaster Professional Network",
+  <meta name="base:app_id" content="6989dfad73cda529e5cd6898" />
   openGraph: {
     title: "Houra Connect",
     description: "Farcaster Professional Network",

@@ -59,9 +59,7 @@ export default function Home() {
         setStatus("Success! Welcome to Houra. ✅");
       } else {
         const errorData = await res.json();
-        setStatus(`Error: ${errorData.error |
-
-| "Verification failed."}`);
+       setStatus(`Error: ${errorData.error || "Verification failed."}`);
       }
     } catch (e) {
       console.error(e);

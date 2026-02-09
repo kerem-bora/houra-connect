@@ -3,11 +3,8 @@ import { useEffect, useState } from "react";
 import sdk from "@farcaster/frame-sdk";
 
 export default function Home() {
-  const = useState(false);
   const [context, setContext] = useState<any>(null);
   const [city, setCity] = useState("");
-  const = useState("");
-  const = useState("");
 
   useEffect(() => {
     const load = async () => {

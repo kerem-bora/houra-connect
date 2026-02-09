@@ -3,6 +3,28 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Houra Connect",
   description: "Farcaster Professional Network",
+  openGraph: {
+    title: "Houra Connect",
+    description: "Farcaster Professional Network",
+    images: ["https://houra.vercel.app/splash.png"], // Paylaşıldığında görünecek resim
+  },
+  other: {
+    // Farcaster Frame v2 Meta Etiketleri
+    "fc:frame": JSON.stringify({
+      version: "next",
+      imageUrl: "https://houra.vercel.app/splash.png",
+      button: {
+        title: "Launch Houra",
+        action: {
+          type: "launch_frame",
+          name: "Houra Connect",
+          url: "https://houra.vercel.app/",
+          splashImageUrl: "https://houra.vercel.app/splash.png",
+          splashBackgroundColor: "#000000",
+        },
+      },
+    }),
+  },
 };
 
 export default function RootLayout({
@@ -12,7 +34,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, padding: 0, backgroundColor: '#000000' }}>
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#000000', color: '#ffffff' }}>
         {children}
       </body>
     </html>

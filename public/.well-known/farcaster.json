@@ -6,7 +6,7 @@
   },
   "frame": {
     "version": "1",
-    "name": "Houra Connect",
+    "name": "Houra",
     "iconUrl": "https://houra.vercel.app/icon.png",
     "homeUrl": "https://houra.vercel.app",
     "imageUrl": "https://houra.vercel.app/splash.png",
@@ -18,9 +18,9 @@
     "tags": [
       "houra",
       "timebank",
-      "alternative economy",
+      "alternative",
       "solidarity",
-      "social"
+      "economy"
     ]
   }
 }

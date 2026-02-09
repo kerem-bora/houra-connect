@@ -16,9 +16,7 @@ export async function POST(req: Request) {
       nonce
     });
 
-    if (!verification.success |
-
-| verification.fid!== fid) {
+    if (!verification.success || verification.fid !== fid) {
       return NextResponse.json({ error: "Invalid identity signature" }, { status: 401 });
     }
 

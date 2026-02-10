@@ -23,7 +23,10 @@ export default function Home() {
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
 
+  // Wagmi'den cüzdanı yakala
   const { address: wagmiAddress } = useAccount();
+  
+  // Öncelik wagmi'de, yoksa context'ten gelen adresi kullan
   const currentAddress = wagmiAddress || context?.user?.address;
 
   // --- BAKİYE OKUMA (WAGMI) ---
@@ -42,11 +45,11 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
+  // --- SDK LOAD ---
   useEffect(() => {
     const load = async () => {
       try {
         const ctx = await sdk.context;
-        console.log("Farcaster Context Loaded:", ctx);
         setContext(ctx);
         sdk.actions.ready();
       } catch (e) {
@@ -60,32 +63,37 @@ export default function Home() {
     }
   }, [isSDKLoaded]);
 
+  // --- PROFİL GÜNCELLEME / KAYIT ---
   const handleJoinNetwork = async () => {
     if (!context?.user?.fid) {
       setStatus("Error: Farcaster user not detected.");
       return;
     }
 
-    setStatus("Requesting signature...");
+    setStatus("Verifying...");
     try {
+      // 1. Nonce al
       const nonceRes = await fetch("/api/auth/nonce");
       const { nonce } = await nonceRes.json();
-      const { message, signature } = await sdk.actions.signIn({ nonce });
 
-      setStatus("Verifying...");
+      // 2. SIWF İmzası (Büyük 'I' ile signIn)
+      // @ts-ignore
+      const result = await sdk.actions.signIn({ nonce });
+
+      // 3. API'ye gönder
       const res = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message,
-          signature,
+          message: result.message,
+          signature: result.signature,
           nonce,
           fid: context.user.fid,
           username: context.user.username,
           pfp: context.user.pfpUrl,
           city,
-          talents, // API tarafında 'bio' kolonuna yazılacak
-          address: currentAddress // API tarafında 'wallet_address' kolonuna yazılacak
+          talents, // API tarafında 'bio' olacak
+          address: currentAddress // API tarafında 'wallet_address' olacak
         }),
       });
 
@@ -96,8 +104,8 @@ export default function Home() {
         setStatus(`Error: ${errorData.error || "Verification failed."}`);
       }
     } catch (e: any) {
-      console.error(e);
-      setStatus(e.message || "Transaction cancelled or failed.");
+      console.error("Sign-in error:", e);
+      setStatus(e.message || "Action failed.");
     }
   };
 
@@ -111,8 +119,8 @@ export default function Home() {
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
-      <h1>Houra</h1>
-      <p style={{ color: '#9ca3af' }}>Time Economy</p>
+      <h1 style={{ marginBottom: '4px' }}>Houra</h1>
+      <p style={{ color: '#9ca3af', marginTop: 0 }}>Time Economy</p>
 
       {/* Balance Card */}
       <div style={{ 
@@ -134,16 +142,18 @@ export default function Home() {
         )}
       </div>
 
-      {/* Profile Section */}
+      {/* Profile Info Row */}
       <div style={{ margin: '10px 0', padding: '15px', borderRadius: '15px', background: '#18181b', display: 'flex', alignItems: 'center', gap: '15px' }}>
         <img src={context?.user?.pfpUrl} style={{ width: '50px', height: '50px', borderRadius: '50%' }} alt="pfp" />
         <div>
           <p style={{ margin: 0, fontWeight: 'bold' }}>@{context?.user?.username}</p>
-          <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>FID: {context?.user?.fid}</p>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
+            {currentAddress ? `${currentAddress.substring(0,6)}...${currentAddress.substring(currentAddress.length-4)}` : "No Wallet"}
+          </p>
         </div>
       </div>
 
-      {/* Input Fields */}
+      {/* Inputs */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
         <input 
           placeholder="City" 
@@ -177,6 +187,7 @@ export default function Home() {
         </button>
       </div>
 
+      {/* Status Message */}
       {status && (
         <div style={{ 
           marginTop: '20px', 

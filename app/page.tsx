@@ -36,11 +36,22 @@ export default function Home() {
       try {
         const ctx = await sdk.context;
         setContext(ctx);
+
+// --- VERİTABANINDAN BİLGİLERİ GETİR ---
+        if (ctx?.user?.fid) {
+          const res = await fetch(`/api/profile?fid=${ctx.user.fid}`);
+          const data = await res.json();
+          if (data.profile) {
+            setCity(data.profile.city || "");
+            setTalents(data.profile.bio || ""); // Tabloda bio olarak yazıyor..          }
+        }
+
         sdk.actions.ready();
       } catch (e) { console.error(e); }
     };
     if (sdk && !isSDKLoaded) { setIsSDKLoaded(true); load(); }
   }, [isSDKLoaded]);
+
 
   // --- DOĞRUDAN KAYIT FONKSİYONU ---
   const handleJoinNetwork = async () => {

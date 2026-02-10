@@ -24,7 +24,7 @@ export default function Home() {
   const [status, setStatus] = useState("");
 
   // Cüzdan adresini belirle (Önce context'e bak, yoksa test adresini kullan)
-  const targetAddress = (context?.user?.address || "0x50c79e5eAb0ABCfbdd742BB3032e33daE38BAbae") as `0x${string}`;
+   const targetAddress = (context?.user?.address || "") as `0x${string}`;
 
   // --- BAKİYE OKUMA (WAGMI) ---
   const { data: rawBalance, error: readError, isPending } = useReadContract({

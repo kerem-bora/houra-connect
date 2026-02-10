@@ -28,7 +28,7 @@ export default function Home() {
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
     functionName: 'balanceOf',
-    args: [context?.user?.address as `0x${string}`],
+    args: [0x50c79e5eAb0ABCfbdd742BB3032e33daE38BAbae as `0x${string}`],
     query: {
       enabled: !!context?.user?.address, // Sadece adres varsa çalıştır
     }

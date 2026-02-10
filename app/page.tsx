@@ -23,17 +23,17 @@ export default function Home() {
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
 
-  // Cüzdan adresini belirle (Önce context'e bak, yoksa test adresini kullan)
-   const targetAddress = (context?.user?.address || "") as `0x${string}`;
+ const { address: wagmiAddress, isConnected } = useAccount();
+ const currentAddress = wagmiAddress || context?.user?.address;
 
   // --- BAKİYE OKUMA (WAGMI) ---
   const { data: rawBalance, error: readError, isPending } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
     functionName: 'balanceOf',
-    args: [targetAddress],
+    args: [currentAddress as `0x${string}`],
     query: {
-      enabled: isSDKLoaded, // SDK yüklendiği an sorgula
+      enabled: !!currentAddress && isSDKLoaded,
       retry: 2
     }
   });

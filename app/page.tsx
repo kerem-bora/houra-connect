@@ -24,7 +24,7 @@ export default function Home() {
   const [status, setStatus] = useState("");
 
   // --- BAKİYE OKUMA (WAGMI) ---
-  const { data: rawBalance } = useReadContract({
+  const { data: rawBalance, error: readError } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
     functionName: 'balanceOf',
@@ -40,7 +40,15 @@ export default function Home() {
     const load = async () => {
       try {
         const ctx = await sdk.context;
+        console.log("Farcaster Context:", ctx);
         setContext(ctx);
+     if (ctx?.user?.address) {
+          console.log("Kullanıcı Adresi:", ctx.user.address);
+        } else {
+          console.warn("Wallet address cannot detected");
+        }
+
+        sdk.actions.ready();
         sdk.actions.ready();
       } catch (e) {
         console.error("SDK Initialization Error:", e);

@@ -1,21 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-// Import yöntemini değiştirdik
 import { sdk } from "@farcaster/frame-sdk"; 
 import { useReadContract, useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
 
 // --- CONFIGURATION ---
 const HOURA_TOKEN_ADDRESS = "0x463eF2dA068790785007571915419695D9BDE7C6"; 
-const TOKEN_ABI = [
-  {
-    name: 'balanceOf',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: 'balance', type: 'uint256' }],
-  },
-] as const;
+const TOKEN_ABI = [{ name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: 'balance', type: 'uint256' }] }] as const;
 
 export default function Home() {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
@@ -28,15 +19,12 @@ export default function Home() {
   const currentAddress = wagmiAddress || context?.user?.address;
 
   // --- BAKİYE OKUMA ---
-  const { data: rawBalance, error: readError, isPending } = useReadContract({
+  const { data: rawBalance, isPending } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
     functionName: 'balanceOf',
     args: [currentAddress as `0x${string}`],
-    query: {
-      enabled: !!currentAddress && isSDKLoaded,
-      retry: 2
-    }
+    query: { enabled: !!currentAddress && isSDKLoaded }
   });
 
   const formattedBalance = rawBalance !== undefined 
@@ -46,47 +34,27 @@ export default function Home() {
   useEffect(() => {
     const load = async () => {
       try {
-        // SDK'nın hazır olduğundan emin ol
         const ctx = await sdk.context;
         setContext(ctx);
         sdk.actions.ready();
-      } catch (e) {
-        console.error("SDK Initialization Error:", e);
-      }
+      } catch (e) { console.error(e); }
     };
-
-    if (sdk && !isSDKLoaded) {
-      setIsSDKLoaded(true);
-      load();
-    }
+    if (sdk && !isSDKLoaded) { setIsSDKLoaded(true); load(); }
   }, [isSDKLoaded]);
 
+  // --- DOĞRUDAN KAYIT FONKSİYONU ---
   const handleJoinNetwork = async () => {
     if (!context?.user?.fid) {
       setStatus("Error: Farcaster user not detected.");
       return;
     }
 
-    setStatus("Requesting signature...");
+    setStatus("Saving...");
     try {
-      const nonceRes = await fetch("/api/auth/nonce");
-      const { nonce } = await nonceRes.json();
-
-      // signIn fonksiyonunu kontrol ederek çağırıyoruz
-      if (!sdk.actions?.signIn) {
-        throw new Error("signIn function not found in SDK. Please check SDK version.");
-      }
-
-      const result = await sdk.actions.signIn({ nonce });
-
-      setStatus("Verifying...");
       const res = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: result.message,
-          signature: result.signature,
-          nonce,
           fid: context.user.fid,
           username: context.user.username,
           pfp: context.user.pfpUrl,
@@ -99,94 +67,46 @@ export default function Home() {
       if (res.ok) {
         setStatus("Success! Welcome to Houra. ✅");
       } else {
-        const errorData = await res.json();
-        setStatus(`Error: ${errorData.error || "Verification failed."}`);
+        setStatus("Error: Database save failed.");
       }
-    } catch (e: any) {
-      console.error("Sign-in error detail:", e);
-      setStatus(e.message || "Action failed.");
+    } catch (e) {
+      setStatus("Error: Connection failed.");
     }
   };
 
-  if (!isSDKLoaded) {
-    return (
-      <div style={{ backgroundColor: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>
-        Loading Time Bank...
-      </div>
-    );
-  }
+  if (!isSDKLoaded) return <div style={{ backgroundColor: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading...</div>;
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
       <h1>Houra</h1>
-      <p style={{ color: '#9ca3af' }}>Time Economy</p>
-
-      <div style={{ 
-        margin: '20px 0', 
-        padding: '20px', 
-        borderRadius: '15px', 
-        background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-        boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)'
-      }}>
-        <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.9, fontWeight: 'bold', textTransform: 'uppercase' }}>Your Balance</p>
-        <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>
-          {isPending ? "..." : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
-        </h2>
+      
+      {/* Balance Card */}
+      <div style={{ margin: '20px 0', padding: '20px', borderRadius: '15px', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' }}>
+        <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 'bold' }}>BALANCE</p>
+        <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>{isPending ? "..." : formattedBalance} Houra</h2>
       </div>
 
+      {/* Profile Row */}
       <div style={{ margin: '10px 0', padding: '15px', borderRadius: '15px', background: '#18181b', display: 'flex', alignItems: 'center', gap: '15px' }}>
-        <img src={context?.user?.pfpUrl} style={{ width: '50px', height: '50px', borderRadius: '50%' }} alt="pfp" />
-        <div>
-          <p style={{ margin: 0, fontWeight: 'bold' }}>@{context?.user?.username}</p>
-          <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
-            {currentAddress ? `${currentAddress.substring(0,6)}...` : "No Wallet"}
-          </p>
-        </div>
+        <img src={context?.user?.pfpUrl} style={{ width: '40px', height: '40px', borderRadius: '50%' }} alt="" />
+        <p style={{ margin: 0, fontWeight: 'bold' }}>@{context?.user?.username}</p>
       </div>
 
+      {/* Inputs */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-        <input 
-          placeholder="City" 
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3f3f46', background: '#18181b', color: '#fff', boxSizing: 'border-box' }}
-        />
-        <textarea 
-          placeholder="Your Talents" 
-          value={talents}
-          onChange={(e) => setTalents(e.target.value)}
-          style={{ width: '100%', padding: '12px', height: '80px', borderRadius: '8px', border: '1px solid #3f3f46', background: '#18181b', color: '#fff', boxSizing: 'border-box' }}
-        />
-
+        <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', background: '#111', color: '#fff' }} />
+        <textarea placeholder="Your Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ width: '100%', padding: '12px', height: '80px', borderRadius: '8px', border: '1px solid #333', background: '#111', color: '#fff' }} />
+        
         <button 
           onClick={handleJoinNetwork}
-          disabled={status === "Verifying..."}
-          style={{ 
-            width: '100%', 
-            padding: '15px', 
-            background: status === "Verifying..." ? '#4b5563' : '#fff', 
-            color: '#000',
-            fontWeight: 'bold', 
-            border: 'none', 
-            borderRadius: '10px',
-            cursor: status === "Verifying..." ? 'not-allowed' : 'pointer',
-            marginTop: '10px'
-          }}
+          disabled={status === "Saving..."}
+          style={{ width: '100%', padding: '15px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer' }}
         >
-          {status === "Verifying..." ? "SAVING..." : "UPDATE PROFILE"}
+          {status === "Saving..." ? "SAVING..." : "UPDATE PROFILE"}
         </button>
       </div>
 
-      {status && (
-        <div style={{ 
-          marginTop: '20px', padding: '12px', borderRadius: '8px', 
-          background: status.includes('Success') ? '#064e3b' : '#450a0a',
-          color: status.includes('Success') ? '#34d399' : '#f87171',
-          fontSize: '0.9rem', textAlign: 'center'
-        }}>
-          {status}
-        </div>
-      )}
+      {status && <p style={{ textAlign: 'center', marginTop: '10px', color: status.includes('Success') ? '#4ade80' : '#f87171' }}>{status}</p>}
     </div>
   );
 }

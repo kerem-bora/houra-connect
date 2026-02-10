@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Houra",
-  description: "Time Economyk",
+  description: "Time Economy",
   openGraph: {
     title: "Houra",
     description: "Time Economy",

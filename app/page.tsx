@@ -23,8 +23,8 @@ export default function Home() {
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
 
- const { address: wagmiAddress, isConnected } = useAccount();
- const currentAddress = wagmiAddress || context?.user?.address;
+  const { address: wagmiAddress } = useAccount();
+  const currentAddress = wagmiAddress || context?.user?.address;
 
   // --- BAKİYE OKUMA (WAGMI) ---
   const { data: rawBalance, error: readError, isPending } = useReadContract({
@@ -84,8 +84,8 @@ export default function Home() {
           username: context.user.username,
           pfp: context.user.pfpUrl,
           city,
-          talents,
-          address: targetAddress
+          talents, // API tarafında 'bio' kolonuna yazılacak
+          address: currentAddress // API tarafında 'wallet_address' kolonuna yazılacak
         }),
       });
 
@@ -127,7 +127,6 @@ export default function Home() {
           {isPending ? "..." : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
         </h2>
         
-        {/* Hata Mesajı (Sadece hata varsa görünür) */}
         {readError && (
           <p style={{ color: '#ff8a8a', fontSize: '0.7rem', marginTop: '10px' }}>
             Read Error: {readError.message.split('\n')[0]}
@@ -161,19 +160,20 @@ export default function Home() {
 
         <button 
           onClick={handleJoinNetwork}
+          disabled={status === "Verifying..."}
           style={{ 
             width: '100%', 
             padding: '15px', 
-            background: '#fff', 
+            background: status === "Verifying..." ? '#4b5563' : '#fff', 
             color: '#000',
             fontWeight: 'bold', 
             border: 'none', 
             borderRadius: '10px',
-            cursor: 'pointer',
+            cursor: status === "Verifying..." ? 'not-allowed' : 'pointer',
             marginTop: '10px'
           }}
         >
-          UPDATE PROFILE
+          {status === "Verifying..." ? "SAVING..." : "UPDATE PROFILE"}
         </button>
       </div>
 

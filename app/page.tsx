@@ -137,4 +137,44 @@ export default function Home() {
           style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3f3f46', background: '#18181b', color: '#fff', boxSizing: 'border-box' }}
         />
         <textarea 
-          placeholder="
+          placeholder="Your Talents (e.g. Coding, Gardening)" 
+          value={talents}
+          onChange={(e) => setTalents(e.target.value)}
+          style={{ width: '100%', padding: '12px', height: '80px', borderRadius: '8px', border: '1px solid #3f3f46', background: '#18181b', color: '#fff', boxSizing: 'border-box' }}
+        />
+
+        <button 
+          onClick={handleJoinNetwork}
+          style={{ 
+            width: '100%', 
+            padding: '15px', 
+            background: '#fff', 
+            color: '#000',
+            fontWeight: 'bold', 
+            border: 'none', 
+            borderRadius: '10px',
+            cursor: 'pointer',
+            marginTop: '10px'
+          }}
+        >
+          UPDATE PROFILE
+        </button>
+      </div>
+
+      {status && (
+        <div style={{ 
+          marginTop: '20px', 
+          padding: '12px', 
+          borderRadius: '8px', 
+          background: status.includes('Success') ? '#064e3b' : '#450a0a',
+          color: status.includes('Success') ? '#34d399' : '#f87171',
+          fontSize: '0.9rem',
+          textAlign: 'center',
+          border: `1px solid ${status.includes('Success') ? '#059669' : '#991b1b'}`
+        }}>
+          {status}
+        </div>
+      )}
+    </div>
+  );
+}

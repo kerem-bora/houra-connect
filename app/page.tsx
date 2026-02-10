@@ -82,8 +82,8 @@ export default function Home() {
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
-      <h1>Houra Connect</h1>
-      <p style={{ color: '#9ca3af' }}>Time Bank on Optimism</p>
+      <h1>Houra</h1>
+      <p style={{ color: '#9ca3af' }}>Time Economy</p>
 
       {/* Profile Section */}
       <div style={{ margin: '20px 0', padding: '15px', borderRadius: '15px', background: '#18181b', display: 'flex', alignItems: 'center', gap: '15px' }}>

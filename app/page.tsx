@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import sdk from "@farcaster/frame-sdk";
-import { useReadContract } from 'wagmi';
+import { useReadContract, useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
 
 // --- CONFIGURATION ---
@@ -23,32 +23,31 @@ export default function Home() {
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
 
+  // Cüzdan adresini belirle (Önce context'e bak, yoksa test adresini kullan)
+  const targetAddress = (context?.user?.address || "0x50c79e5eAb0ABCfbdd742BB3032e33daE38BAbae") as `0x${string}`;
+
   // --- BAKİYE OKUMA (WAGMI) ---
-  const { data: rawBalance, error: readError } = useReadContract({
+  const { data: rawBalance, error: readError, isPending } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
     functionName: 'balanceOf',
-    args: [0x50c79e5eAb0ABCfbdd742BB3032e33daE38BAbae as `0x${string}`],
+    args: [targetAddress],
     query: {
-      enabled: !!context?.user?.address, // Sadece adres varsa çalıştır
+      enabled: isSDKLoaded, // SDK yüklendiği an sorgula
+      retry: 2
     }
   });
 
-  const formattedBalance = rawBalance ? formatUnits(rawBalance as bigint, 18) : "0";
+  const formattedBalance = rawBalance !== undefined 
+    ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
+    : "0";
 
   useEffect(() => {
     const load = async () => {
       try {
         const ctx = await sdk.context;
-        console.log("Farcaster Context:", ctx);
+        console.log("Farcaster Context Loaded:", ctx);
         setContext(ctx);
-     if (ctx?.user?.address) {
-          console.log("Kullanıcı Adresi:", ctx.user.address);
-        } else {
-          console.warn("Wallet address cannot detected");
-        }
-
-        sdk.actions.ready();
         sdk.actions.ready();
       } catch (e) {
         console.error("SDK Initialization Error:", e);
@@ -86,7 +85,7 @@ export default function Home() {
           pfp: context.user.pfpUrl,
           city,
           talents,
-          address: context.user.address // Cüzdan adresini DB'ye eklemek önemli
+          address: targetAddress
         }),
       });
 
@@ -124,7 +123,16 @@ export default function Home() {
         boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)'
       }}>
         <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.9, fontWeight: 'bold', textTransform: 'uppercase' }}>Your Balance</p>
-        <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>{Number(formattedBalance).toLocaleString()} <span style={{ fontSize: '1rem' }}>Houra</span></h2>
+        <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>
+          {isPending ? "..." : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
+        </h2>
+        
+        {/* Hata Mesajı (Sadece hata varsa görünür) */}
+        {readError && (
+          <p style={{ color: '#ff8a8a', fontSize: '0.7rem', marginTop: '10px' }}>
+            Read Error: {readError.message.split('\n')[0]}
+          </p>
+        )}
       </div>
 
       {/* Profile Section */}

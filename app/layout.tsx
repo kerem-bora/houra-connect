@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Houra Connect",
-  description: "Farcaster Professional Network",
+  title: "Houra",
+  description: "Time Economyk",
   openGraph: {
-    title: "Houra Connect",
-    description: "Farcaster Professional Network",
+    title: "Houra",
+    description: "Time Economy",
     images: ["https://houra.vercel.app/splash.png"], // Paylaşıldığında görünecek resim
   },
   other: {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
         title: "Launch Houra",
         action: {
           type: "launch_frame",
-          name: "Houra Connect",
+          name: "Houra",
           url: "https://houra.vercel.app/",
           splashImageUrl: "https://houra.vercel.app/splash.png",
           splashBackgroundColor: "#000000",

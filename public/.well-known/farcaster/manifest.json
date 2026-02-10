@@ -1,26 +1,14 @@
 {
-  "accountAssociation": {
-    "header": "",
-    "payload": "",
-    "signature": ""
-  },
-  "frame": {
-    "version": "1",
+    "version": "1.0",
     "name": "Houra",
     "iconUrl": "https://houra.vercel.app/icon.png",
     "homeUrl": "https://houra.vercel.app",
-    "imageUrl": "https://houra.vercel.app/splash.png",
-    "buttonTitle": "Connect",
-    "webhookUrl": "https://houra.vercel.app/api/webhook",
-    "splashImageUrl": "https://houra.vercel.app/splash.png",
-    "splashBackgroundColor": "#000000",
-    "primaryCategory": "social",
-    "tags": [
-      "houra",
-      "timebank",
-      "alternative",
-      "solidarity",
-      "economy"
+    "description": "Time bank application",
+    "actions": [
+    {
+      "name": "Houra",
+    "url":  "https://houra.vercel.app",
+    "icon": "home",
+      }
     ]
-  }
 }

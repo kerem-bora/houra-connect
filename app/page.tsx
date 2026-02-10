@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import sdk from "@farcaster/frame-sdk";
+// Import yöntemini değiştirdik
+import { sdk } from "@farcaster/frame-sdk"; 
 import { useReadContract, useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
 
@@ -23,13 +24,10 @@ export default function Home() {
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
 
-  // Wagmi'den cüzdanı yakala
   const { address: wagmiAddress } = useAccount();
-  
-  // Öncelik wagmi'de, yoksa context'ten gelen adresi kullan
   const currentAddress = wagmiAddress || context?.user?.address;
 
-  // --- BAKİYE OKUMA (WAGMI) ---
+  // --- BAKİYE OKUMA ---
   const { data: rawBalance, error: readError, isPending } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
@@ -45,10 +43,10 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- SDK LOAD ---
   useEffect(() => {
     const load = async () => {
       try {
+        // SDK'nın hazır olduğundan emin ol
         const ctx = await sdk.context;
         setContext(ctx);
         sdk.actions.ready();
@@ -63,24 +61,25 @@ export default function Home() {
     }
   }, [isSDKLoaded]);
 
-  // --- PROFİL GÜNCELLEME / KAYIT ---
   const handleJoinNetwork = async () => {
     if (!context?.user?.fid) {
       setStatus("Error: Farcaster user not detected.");
       return;
     }
 
-    setStatus("Verifying...");
+    setStatus("Requesting signature...");
     try {
-      // 1. Nonce al
       const nonceRes = await fetch("/api/auth/nonce");
       const { nonce } = await nonceRes.json();
 
-      // 2. SIWF İmzası (Büyük 'I' ile signIn)
-      // @ts-ignore
+      // signIn fonksiyonunu kontrol ederek çağırıyoruz
+      if (!sdk.actions?.signIn) {
+        throw new Error("signIn function not found in SDK. Please check SDK version.");
+      }
+
       const result = await sdk.actions.signIn({ nonce });
 
-      // 3. API'ye gönder
+      setStatus("Verifying...");
       const res = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,8 +91,8 @@ export default function Home() {
           username: context.user.username,
           pfp: context.user.pfpUrl,
           city,
-          talents, // API tarafında 'bio' olacak
-          address: currentAddress // API tarafında 'wallet_address' olacak
+          talents,
+          address: currentAddress 
         }),
       });
 
@@ -104,7 +103,7 @@ export default function Home() {
         setStatus(`Error: ${errorData.error || "Verification failed."}`);
       }
     } catch (e: any) {
-      console.error("Sign-in error:", e);
+      console.error("Sign-in error detail:", e);
       setStatus(e.message || "Action failed.");
     }
   };
@@ -119,10 +118,9 @@ export default function Home() {
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ marginBottom: '4px' }}>Houra</h1>
-      <p style={{ color: '#9ca3af', marginTop: 0 }}>Time Economy</p>
+      <h1>Houra</h1>
+      <p style={{ color: '#9ca3af' }}>Time Economy</p>
 
-      {/* Balance Card */}
       <div style={{ 
         margin: '20px 0', 
         padding: '20px', 
@@ -134,26 +132,18 @@ export default function Home() {
         <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>
           {isPending ? "..." : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
         </h2>
-        
-        {readError && (
-          <p style={{ color: '#ff8a8a', fontSize: '0.7rem', marginTop: '10px' }}>
-            Read Error: {readError.message.split('\n')[0]}
-          </p>
-        )}
       </div>
 
-      {/* Profile Info Row */}
       <div style={{ margin: '10px 0', padding: '15px', borderRadius: '15px', background: '#18181b', display: 'flex', alignItems: 'center', gap: '15px' }}>
         <img src={context?.user?.pfpUrl} style={{ width: '50px', height: '50px', borderRadius: '50%' }} alt="pfp" />
         <div>
           <p style={{ margin: 0, fontWeight: 'bold' }}>@{context?.user?.username}</p>
           <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
-            {currentAddress ? `${currentAddress.substring(0,6)}...${currentAddress.substring(currentAddress.length-4)}` : "No Wallet"}
+            {currentAddress ? `${currentAddress.substring(0,6)}...` : "No Wallet"}
           </p>
         </div>
       </div>
 
-      {/* Inputs */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
         <input 
           placeholder="City" 
@@ -162,7 +152,7 @@ export default function Home() {
           style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3f3f46', background: '#18181b', color: '#fff', boxSizing: 'border-box' }}
         />
         <textarea 
-          placeholder="Your Talents (e.g. Coding, Gardening)" 
+          placeholder="Your Talents" 
           value={talents}
           onChange={(e) => setTalents(e.target.value)}
           style={{ width: '100%', padding: '12px', height: '80px', borderRadius: '8px', border: '1px solid #3f3f46', background: '#18181b', color: '#fff', boxSizing: 'border-box' }}
@@ -187,17 +177,12 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Status Message */}
       {status && (
         <div style={{ 
-          marginTop: '20px', 
-          padding: '12px', 
-          borderRadius: '8px', 
+          marginTop: '20px', padding: '12px', borderRadius: '8px', 
           background: status.includes('Success') ? '#064e3b' : '#450a0a',
           color: status.includes('Success') ? '#34d399' : '#f87171',
-          fontSize: '0.9rem',
-          textAlign: 'center',
-          border: `1px solid ${status.includes('Success') ? '#059669' : '#991b1b'}`
+          fontSize: '0.9rem', textAlign: 'center'
         }}>
           {status}
         </div>

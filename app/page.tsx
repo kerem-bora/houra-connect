@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-// Resmi Mini App SDK'sını içe aktarıyoruz
-import { miniapp } from "@farcaster/miniapp-sdk";
+import { sdk } from "@farcaster/frame-sdk"; 
 import { useReadContract, useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
 
@@ -30,7 +29,7 @@ export default function Home() {
   const { address: wagmiAddress } = useAccount();
   const currentAddress = (wagmiAddress || context?.user?.address || "") as `0x${string}`;
 
-  // --- BALANCE READING (Default to 0) ---
+  // --- BALANCE READING ---
   const { data: rawBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
@@ -43,25 +42,26 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- SDK INITIALIZATION ---
+  // --- SDK & BIO/CITY FETCHING ---
   useEffect(() => {
     const load = async () => {
       try {
-        // Mini App SDK ile context alımı
-        const ctx = await miniapp.getContext();
+        const ctx = await sdk.context;
         setContext(ctx);
-
+        
+        // BIO ve CITY bilgilerini burada çekiyoruz
         if (ctx?.user?.fid) {
           const res = await fetch(`/api/profile?fid=${ctx.user.fid}`);
-          const data = await res.json();
-          if (data.profile) {
-            setCity(data.profile.city || "");
-            setTalents(data.profile.bio || "");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.profile) {
+              setCity(data.profile.city || "");
+              setTalents(data.profile.bio || ""); // DB'deki bio -> UI'daki talents
+            }
           }
         }
-        // Uygulamanın hazır olduğunu bildir
-        miniapp.ready();
-      } catch (e) { console.error("SDK Init Error:", e); }
+        sdk.actions.ready();
+      } catch (e) { console.error("Init Error:", e); }
     };
 
     if (!isSDKLoaded) {
@@ -108,10 +108,10 @@ export default function Home() {
     } catch (e) { setStatus("Error: Connection failed."); }
   };
 
-  // --- NATIVE PROFILE ACTION (Miniapp SDK) ---
+  // --- NATIVE PROFILE TRIGGER (FIXED) ---
   const handleViewProfile = (fid: number) => {
-    // SDK üzerinden resmi profil görüntüleme aksiyonu
-    miniapp.viewProfile({ fid });
+    // SDK v2'de doğru kullanım budur. SSL hatası vermez, Native Profile açar.
+    sdk.actions.viewProfile({ fid });
   };
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading Houra...</div>;

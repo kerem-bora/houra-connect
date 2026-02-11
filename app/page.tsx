@@ -30,7 +30,7 @@ export default function Home() {
   const currentAddress = (wagmiAddress || context?.user?.address || "") as `0x${string}`;
 
   // --- BALANCE READING ---
-  const { data: rawBalance, isPending: isBalancePending } = useReadContract({
+  const { data: rawBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
     functionName: 'balanceOf',
@@ -38,11 +38,12 @@ export default function Home() {
     query: { enabled: !!currentAddress && isSDKLoaded }
   });
 
+  // If balance is loading or undefined, show 0 instead of "..."
   const formattedBalance = rawBalance !== undefined 
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- SDK & INITIAL DATA LOAD ---
+  // --- SDK & DATA LOAD ---
   useEffect(() => {
     const load = async () => {
       try {
@@ -57,7 +58,7 @@ export default function Home() {
           }
         }
         sdk.actions.ready();
-      } catch (e) { console.error("Init Error:", e); }
+      } catch (e) { console.error("Initialization Error:", e); }
     };
     if (sdk && !isSDKLoaded) { setIsSDKLoaded(true); load(); }
   }, [isSDKLoaded]);
@@ -100,29 +101,29 @@ export default function Home() {
     } catch (e) { setStatus("Error: Connection failed."); }
   };
 
-  // --- OPEN BASE PROFILE (Optimized Link) ---
+  // --- OPEN BASE PROFILE ---
   const openBaseProfile = (address: string) => {
     if (!address) {
       alert("No wallet linked for this user.");
       return;
     }
-    // Base App içinde en kararlı çalışan ve SSL sorunu yaratmayan profil link yapısı:
-    const profileUrl = `https://base.org/names/${address}`;
+    // Updated to use the web-stable prefix to avoid SSL mismatch
+    const profileUrl = `https://www.base.eth.xyz/name/${address}`;
     sdk.actions.openUrl(profileUrl);
   };
 
-  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading...</div>;
+  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading Houra...</div>;
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
       <h1>Houra</h1>
-      <p style={{ color: '#666', margin: '0 0 20px 0', fontSize: '0.9rem' }}>Decentralized Time Bank</p>
+      <p style={{ color: '#666', margin: '0 0 20px 0', fontSize: '0.9rem' }}>Time Economy</p>
       
       {/* Balance Card */}
       <div style={{ margin: '20px 0', padding: '20px', borderRadius: '15px', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' }}>
         <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 'bold', opacity: 0.8 }}>MY BALANCE</p>
         <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>
-          {isBalancePending ? "..." : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
+          {formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
         </h2>
       </div>
 
@@ -133,7 +134,7 @@ export default function Home() {
         </summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
           <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} />
-          <textarea placeholder="Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ width: '100%', padding: '12px', height: '60px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} />
+          <textarea placeholder="Your Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ width: '100%', padding: '12px', height: '60px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} />
           <button onClick={handleJoinNetwork} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer', border: 'none' }}>UPDATE PROFILE</button>
         </div>
       </details>

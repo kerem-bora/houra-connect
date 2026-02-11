@@ -38,12 +38,12 @@ export default function Home() {
     query: { enabled: !!currentAddress && isSDKLoaded }
   });
 
-  // If balance is loading or undefined, show 0 instead of "..."
+  // Default to 0 instead of "..." or undefined
   const formattedBalance = rawBalance !== undefined 
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- SDK & DATA LOAD ---
+  // --- SDK INITIALIZATION ---
   useEffect(() => {
     const load = async () => {
       try {
@@ -58,12 +58,12 @@ export default function Home() {
           }
         }
         sdk.actions.ready();
-      } catch (e) { console.error("Initialization Error:", e); }
+      } catch (e) { console.error("Init Error:", e); }
     };
     if (sdk && !isSDKLoaded) { setIsSDKLoaded(true); load(); }
   }, [isSDKLoaded]);
 
-  // --- SEARCH ---
+  // --- SEARCH LOGIC ---
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -107,8 +107,8 @@ export default function Home() {
       alert("No wallet linked for this user.");
       return;
     }
-    // Updated to use the web-stable prefix to avoid SSL mismatch
-    const profileUrl = `https://www.base.eth.xyz/name/${address}`;
+    // Using the official Basenames path on the primary domain to avoid SSL mismatches
+    const profileUrl = `https://www.base.org/names/${address}`;
     sdk.actions.openUrl(profileUrl);
   };
 
@@ -143,10 +143,12 @@ export default function Home() {
 
       {/* Search Section */}
       <div style={{ marginTop: '20px' }}>
-        <h3 style={{ marginBottom: '15px' }}>Connect on Base</h3>
+        <h3 style={{ marginBottom: '15px' }}>Search</h3>
         <input placeholder="Search name, city or talent..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', background: '#000', color: '#fff', boxSizing: 'border-box', marginBottom: '20px' }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {isSearching && <p style={{ textAlign: 'center', color: '#666' }}>Searching...</p>}
+          
           {searchResults.map((user) => (
             <div key={user.fid} style={{ padding: '15px', background: '#111', borderRadius: '12px', border: '1px solid #222' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
@@ -161,7 +163,7 @@ export default function Home() {
                 onClick={() => openBaseProfile(user.wallet_address)} 
                 style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                GO TO BASE PROFILE
+                GO TO PROFILE
               </button>
             </div>
           ))}

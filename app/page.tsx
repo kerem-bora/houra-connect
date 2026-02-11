@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { sdk } from "@farcaster/frame-sdk"; 
+// Resmi Mini App SDK'sını içe aktarıyoruz
+import { miniapp } from "@farcaster/miniapp-sdk";
 import { useReadContract, useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
-// OnchainKit'in Mini App'ler için sunduğu hook
-import { useViewProfile } from '@coinbase/onchainkit/minikit';
 
 // --- CONFIGURATION ---
 const HOURA_TOKEN_ADDRESS = "0x463eF2dA068790785007571915419695D9BDE7C6"; 
@@ -31,7 +30,7 @@ export default function Home() {
   const { address: wagmiAddress } = useAccount();
   const currentAddress = (wagmiAddress || context?.user?.address || "") as `0x${string}`;
 
-  // --- BAKİYE OKUMA (0 Mantığı) ---
+  // --- BALANCE READING (Default to 0) ---
   const { data: rawBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
@@ -44,12 +43,14 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- INITIAL DATA LOAD ---
+  // --- SDK INITIALIZATION ---
   useEffect(() => {
     const load = async () => {
       try {
-        const ctx = await sdk.context;
+        // Mini App SDK ile context alımı
+        const ctx = await miniapp.getContext();
         setContext(ctx);
+
         if (ctx?.user?.fid) {
           const res = await fetch(`/api/profile?fid=${ctx.user.fid}`);
           const data = await res.json();
@@ -58,10 +59,15 @@ export default function Home() {
             setTalents(data.profile.bio || "");
           }
         }
-        sdk.actions.ready();
-      } catch (e) { console.error("Initialization Error:", e); }
+        // Uygulamanın hazır olduğunu bildir
+        miniapp.ready();
+      } catch (e) { console.error("SDK Init Error:", e); }
     };
-    if (sdk && !isSDKLoaded) { setIsSDKLoaded(true); load(); }
+
+    if (!isSDKLoaded) {
+      setIsSDKLoaded(true);
+      load();
+    }
   }, [isSDKLoaded]);
 
   // --- SEARCH LOGIC ---
@@ -102,18 +108,10 @@ export default function Home() {
     } catch (e) { setStatus("Error: Connection failed."); }
   };
 
-  // --- DYNAMIC PROFILE COMPONENT ---
-  // OnchainKit hook'unu burada her kullanıcı için dinamik FID ile çağıracağız
-  const ProfileButton = ({ fid }: { fid: number }) => {
-    const viewProfile = useViewProfile(fid);
-    return (
-      <button 
-        onClick={viewProfile}
-        style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
-      >
-        VIEW PROFILE
-      </button>
-    );
+  // --- NATIVE PROFILE ACTION (Miniapp SDK) ---
+  const handleViewProfile = (fid: number) => {
+    // SDK üzerinden resmi profil görüntüleme aksiyonu
+    miniapp.viewProfile({ fid });
   };
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading Houra...</div>;
@@ -164,8 +162,12 @@ export default function Home() {
               </div>
               <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '12px' }}>{user.bio}</p>
               
-              {/* Native OnchainKit Profile Trigger */}
-              <ProfileButton fid={Number(user.fid)} />
+              <button 
+                onClick={() => handleViewProfile(Number(user.fid))}
+                style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                VIEW PROFILE
+              </button>
             </div>
           ))}
         </div>

@@ -1,247 +1,119 @@
 "use client";
 import { useEffect, useState } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
-import { useReadContract, useAccount, useWriteContract } from 'wagmi';
-import { formatUnits, parseUnits } from 'viem';
+import { useAccount, useWriteContract, useSwitchChain } from 'wagmi';
+import { base } from 'wagmi/chains';
+import { parseUnits } from 'viem';
 
 // --- CONFIGURATION ---
 const HOURA_TOKEN_ADDRESS = "0x463eF2dA068790785007571915419695D9BDE7C6"; 
 const TOKEN_ABI = [
   { 
-    name: 'balanceOf', 
+    name: 'transfer', 
     type: 'function', 
-    stateMutability: 'view', 
-    inputs: [{ name: 'account', type: 'address' }], 
-    outputs: [{ name: 'balance', type: 'uint256' }] 
-  },
-  {
-    name: 'transfer',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'value', type: 'uint256' }
-    ],
-    outputs: [{ name: '', type: 'bool' }]
+    stateMutability: 'nonpayable', 
+    inputs: [{ name: 'to', type: 'address' }, { name: 'value', type: 'uint256' }], 
+    outputs: [{ name: '', type: 'bool' }] 
   }
 ] as const;
 
 export default function Home() {
-  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
-  const [context, setContext] = useState<any>(null);
-  const [city, setCity] = useState("");
-  const [talents, setTalents] = useState("");
-  const [status, setStatus] = useState("");
-
-  // Search States
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  const { address: wagmiAddress } = useAccount();
-  const currentAddress = (wagmiAddress || context?.user?.address || "") as `0x${string}`;
-
-  // --- WAGMI FOR TOKEN TRANSFER ---
+  const { address: userAddress, isConnected } = useAccount();
+  const { switchChain } = useSwitchChain();
   const { writeContract, isPending: isTxPending } = useWriteContract();
+  
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // --- BALANCE READING ---
-  const { data: rawBalance, isPending: isBalancePending } = useReadContract({
-    address: HOURA_TOKEN_ADDRESS as `0x${string}`,
-    abi: TOKEN_ABI,
-    functionName: 'balanceOf',
-    args: currentAddress ? [currentAddress] : undefined,
-    query: { enabled: !!currentAddress && isSDKLoaded }
-  });
-
-  const formattedBalance = rawBalance !== undefined 
-    ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
-    : "0";
-
-  // --- SDK & INITIAL DATA LOAD ---
+  // --- ENSURE BASE NETWORK ---
   useEffect(() => {
-    const load = async () => {
-      try {
-        const ctx = await sdk.context;
-        setContext(ctx);
-
-        if (ctx?.user?.fid) {
-          const res = await fetch(`/api/profile?fid=${ctx.user.fid}`);
-          const data = await res.json();
-          if (data.profile) {
-            setCity(data.profile.city || "");
-            setTalents(data.profile.bio || "");
-          }
-        }
-        sdk.actions.ready();
-      } catch (e) { console.error("Initialization Error:", e); }
-    };
-
-    if (sdk && !isSDKLoaded) {
-      setIsSDKLoaded(true);
-      load();
+    if (isConnected) {
+      switchChain({ chainId: base.id });
     }
-  }, [isSDKLoaded]);
+  }, [isConnected, switchChain]);
 
-  // --- SEARCH FUNCTIONALITY ---
+  // --- SEND HOURA (Base App Optimized) ---
+  const handleSendHoura = async (recipientAddress: string, username: string) => {
+    if (!recipientAddress) {
+      alert("This user hasn't linked a Base wallet yet.");
+      return;
+    }
+
+    const amount = prompt(`Enter Houra amount for ${username}:`, "1");
+    if (!amount) return;
+
+    try {
+      // Base App'in cüzdan modülünü tetiklemek için en temiz wagmi çağrısı
+      writeContract({
+        address: HOURA_TOKEN_ADDRESS as `0x${string}`,
+        abi: TOKEN_ABI,
+        functionName: 'transfer',
+        args: [recipientAddress as `0x${string}`, parseUnits(amount, 18)],
+      });
+    } catch (error) {
+      console.error("Wallet Trigger Error:", error);
+    }
+  };
+
+  // --- MESSAGING (Base/Onchain Social Link) ---
+  const openBaseChat = (walletAddress: string) => {
+    // Base ekosisteminde cüzdan odaklı mesajlaşma sayfasına yönlendirme
+    // Eğer Base App içindeysen, bu tip linkler uygulama içi tarayıcıda cüzdanı tetikte tutar.
+    const baseChatUrl = `https://base.org/name/${walletAddress}`; 
+    window.open(baseChatUrl, '_blank');
+  };
+
+  // Search API fetch (öncekiyle aynı mantık)
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
+    const search = async () => {
       if (searchQuery.length > 1) {
-        setIsSearching(true);
-        try {
-          const res = await fetch(`/api/search?q=${searchQuery}`);
-          const data = await res.json();
-          setSearchResults(data.users || []);
-        } catch (error) {
-          console.error("Search error:", error);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
+        const res = await fetch(`/api/search?q=${searchQuery}`);
+        const data = await res.json();
+        setSearchResults(data.users || []);
       }
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
+    };
+    search();
   }, [searchQuery]);
 
-  // --- PROFILE UPDATE FUNCTION ---
-  const handleJoinNetwork = async () => {
-    if (!context?.user?.fid) {
-      setStatus("Error: Farcaster user not detected.");
-      return;
-    }
-    setStatus("Saving...");
-    try {
-      const res = await fetch("/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fid: context.user.fid,
-          username: context.user.username,
-          pfp: context.user.pfpUrl,
-          city,
-          talents,
-          address: currentAddress 
-        }),
-      });
-      if (res.ok) setStatus("Success! Profile updated. ✅");
-      else setStatus("Error: Database save failed.");
-    } catch (e) { setStatus("Error: Connection failed."); }
-  };
-
-  // --- TRANSFER FUNCTION ---
-  const handleSendHoura = (toAddress: string, username: string) => {
-    if (!toAddress) {
-      alert("This user has no wallet linked.");
-      return;
-    }
-    const amount = prompt(`How many Houra do you want to send to @${username}?`, "1");
-    if (!amount || isNaN(Number(amount))) return;
-
-    writeContract({
-      address: HOURA_TOKEN_ADDRESS as `0x${string}`,
-      abi: TOKEN_ABI,
-      functionName: 'transfer',
-      args: [toAddress as `0x${string}`, parseUnits(amount, 18)],
-    }, {
-      onSuccess: () => setStatus(`Sent ${amount} Houra to @${username}!`),
-      onError: (err) => setStatus(`Failed: ${err.message.split('\n')[0]}`)
-    });
-  };
-
-  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading Houra Network...</div>;
-
   return (
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ marginBottom: '5px' }}>Houra</h1>
-      <p style={{ color: '#666', margin: '0 0 20px 0', fontSize: '0.9rem' }}>Decentralized Time Bank</p>
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px' }}>
+      <h1>Houra <span style={{fontSize: 'small', color: '#2563eb'}}>on Base</span></h1>
       
-      {/* Balance Card */}
-      <div style={{ margin: '20px 0', padding: '20px', borderRadius: '15px', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' }}>
-        <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 'bold', opacity: 0.8 }}>MY BALANCE</p>
-        <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>
-          {isBalancePending ? "..." : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
-        </h2>
-      </div>
+      <input 
+        placeholder="Search Base users..." 
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#111', color: '#fff', border: '1px solid #2563eb' }}
+      />
 
-      {/* Profile Section */}
-      <details style={{ marginBottom: '30px', background: '#111', borderRadius: '12px', padding: '10px' }}>
-        <summary style={{ cursor: 'pointer', padding: '10px', fontWeight: 'bold', color: '#9ca3af' }}>
-          {city ? `📍 ${city} | Edit Profile` : "👤 Setup Your Profile"}
-        </summary>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-          <input 
-            placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} 
-            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} 
-          />
-          <textarea 
-            placeholder="Your Talents (e.g. Design, Yoga, Math)" value={talents} onChange={(e) => setTalents(e.target.value)} 
-            style={{ width: '100%', padding: '12px', height: '60px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} 
-          />
-          <button 
-            onClick={handleJoinNetwork} disabled={status === "Saving..."}
-            style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer', border: 'none' }}
-          >
-            {status === "Saving..." ? "SAVING..." : "UPDATE PROFILE"}
-          </button>
-        </div>
-      </details>
-
-      <hr style={{ border: '0.5px solid #222', margin: '30px 0' }} />
-
-      {/* Search & Discover Section */}
       <div style={{ marginTop: '20px' }}>
-        <h3 style={{ marginBottom: '15px', fontSize: '1.2rem' }}>Send Houra</h3>
-        <input 
-          placeholder="Search name, city or talent..." 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', background: '#000', color: '#fff', boxSizing: 'border-box', marginBottom: '20px' }}
-        />
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {isSearching && <p style={{ textAlign: 'center', color: '#666' }}>Searching network...</p>}
-          
-          {searchResults.map((user) => (
-            <div key={user.fid} style={{ padding: '15px', background: '#111', borderRadius: '12px', border: '1px solid #222' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <img src={user.avatar_url} style={{ width: '40px', height: '40px', borderRadius: '50%' }} alt="" />
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 'bold' }}>@{user.username}</p>
-                    <p style={{ margin: 0, fontSize: '0.7rem', color: '#666' }}>📍 {user.city || "Earth"}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => sdk.actions.openUrl(`https://warpcast.com/~/messaging/send/${user.fid}`)}
-                  style={{ background: '#27272a', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer' }}
-                >
-                  Chat
-                </button>
+        {searchResults.map((user) => (
+          <div key={user.fid} style={{ padding: '15px', background: '#111', borderRadius: '12px', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img src={user.avatar_url} style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                <p><strong>{user.username}</strong></p>
               </div>
-              
-              <p style={{ fontSize: '0.85rem', color: '#9ca3af', margin: '12px 0' }}>{user.bio}</p>
-              
               <button 
-                onClick={() => handleSendHoura(user.wallet_address, user.username)}
-                disabled={isTxPending}
-                style={{ width: '100%', padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                onClick={() => openBaseChat(user.wallet_address)}
+                style={{ background: '#0052FF', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px' }}
               >
-                {isTxPending ? "WAITING FOR WALLET..." : "SEND HOURA"}
+                Chat
               </button>
             </div>
-          ))}
+            
+            <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{user.bio}</p>
 
-          {searchQuery.length > 1 && searchResults.length === 0 && !isSearching && (
-            <p style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>No Houra users found.</p>
-          )}
-        </div>
+            <button 
+              onClick={() => handleSendHoura(user.wallet_address, user.username)}
+              disabled={isTxPending}
+              style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', marginTop: '10px' }}
+            >
+              {isTxPending ? "CONFIRM IN WALLET..." : "SEND HOURA"}
+            </button>
+          </div>
+        ))}
       </div>
-
-      {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '10px', textAlign: 'center', fontSize: '0.9rem', zIndex: 100 }}>
-          {status}
-        </div>
-      )}
     </div>
   );
 }

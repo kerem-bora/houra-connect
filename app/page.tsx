@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
-import { useReadContract, useAccount, useWriteContract } from 'wagmi';
-import { formatUnits, parseUnits } from 'viem';
+import { useReadContract, useAccount } from 'wagmi';
+import { formatUnits } from 'viem';
 
 // --- CONFIGURATION ---
 const HOURA_TOKEN_ADDRESS = "0x463eF2dA068790785007571915419695D9BDE7C6"; 
@@ -62,7 +62,7 @@ export default function Home() {
     if (sdk && !isSDKLoaded) { setIsSDKLoaded(true); load(); }
   }, [isSDKLoaded]);
 
-  // --- SEARCH FUNCTIONALITY ---
+  // --- SEARCH ---
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -100,13 +100,15 @@ export default function Home() {
     } catch (e) { setStatus("Error: Connection failed."); }
   };
 
-  // --- OPEN BASE PROFILE (FIXED SSL LINK) ---
+  // --- OPEN BASE PROFILE (Optimized Link) ---
   const openBaseProfile = (address: string) => {
     if (!address) {
-      alert("This user has no wallet address.");
+      alert("No wallet linked for this user.");
       return;
     }
-    sdk.actions.openUrl(`https://base.org/name/${address}`);
+    // Base App içinde en kararlı çalışan ve SSL sorunu yaratmayan profil link yapısı:
+    const profileUrl = `https://base.org/names/${address}`;
+    sdk.actions.openUrl(profileUrl);
   };
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading...</div>;
@@ -114,13 +116,13 @@ export default function Home() {
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
       <h1>Houra</h1>
-      <p style={{ color: '#666', margin: '0 0 20px 0', fontSize: '0.9rem' }}>Time Economy</p>
+      <p style={{ color: '#666', margin: '0 0 20px 0', fontSize: '0.9rem' }}>Decentralized Time Bank</p>
       
       {/* Balance Card */}
       <div style={{ margin: '20px 0', padding: '20px', borderRadius: '15px', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' }}>
         <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 'bold', opacity: 0.8 }}>MY BALANCE</p>
         <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>
-          {isBalancePending ? "0" : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
+          {isBalancePending ? "..." : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
         </h2>
       </div>
 
@@ -130,9 +132,9 @@ export default function Home() {
           {city ? `📍 ${city} | Edit Profile` : "👤 Setup Your Profile"}
         </summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff' }} />
-          <textarea placeholder="Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ width: '100%', padding: '12px', height: '60px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff' }} />
-          <button onClick={handleJoinNetwork} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px' }}>UPDATE PROFILE</button>
+          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} />
+          <textarea placeholder="Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ width: '100%', padding: '12px', height: '60px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} />
+          <button onClick={handleJoinNetwork} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer', border: 'none' }}>UPDATE PROFILE</button>
         </div>
       </details>
 
@@ -141,7 +143,7 @@ export default function Home() {
       {/* Search Section */}
       <div style={{ marginTop: '20px' }}>
         <h3 style={{ marginBottom: '15px' }}>Connect on Base</h3>
-        <input placeholder="Search name, city or talent..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', background: '#000', color: '#fff', marginBottom: '20px' }} />
+        <input placeholder="Search name, city or talent..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', background: '#000', color: '#fff', boxSizing: 'border-box', marginBottom: '20px' }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {searchResults.map((user) => (
@@ -154,15 +156,18 @@ export default function Home() {
                 </div>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '12px' }}>{user.bio}</p>
-              <button onClick={() => openBaseProfile(user.wallet_address)} style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>
-                VIEW BASE PROFILE
+              <button 
+                onClick={() => openBaseProfile(user.wallet_address)} 
+                style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                GO TO BASE PROFILE
               </button>
             </div>
           ))}
         </div>
       </div>
 
-      {status && <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '10px', textAlign: 'center' }}>{status}</div>}
+      {status && <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '10px', textAlign: 'center', fontSize: '0.9rem' }}>{status}</div>}
     </div>
   );
 }

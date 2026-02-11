@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
 import { useReadContract, useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
+// OnchainKit'in Mini App'ler için sunduğu hook
+import { useViewProfile } from '@coinbase/onchainkit/minikit';
 
 // --- CONFIGURATION ---
 const HOURA_TOKEN_ADDRESS = "0x463eF2dA068790785007571915419695D9BDE7C6"; 
@@ -29,7 +31,7 @@ export default function Home() {
   const { address: wagmiAddress } = useAccount();
   const currentAddress = (wagmiAddress || context?.user?.address || "") as `0x${string}`;
 
-  // --- BALANCE READING ---
+  // --- BAKİYE OKUMA (0 Mantığı) ---
   const { data: rawBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
@@ -38,12 +40,11 @@ export default function Home() {
     query: { enabled: !!currentAddress && isSDKLoaded }
   });
 
-  // Default to 0 instead of "..." or undefined
   const formattedBalance = rawBalance !== undefined 
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- SDK INITIALIZATION ---
+  // --- INITIAL DATA LOAD ---
   useEffect(() => {
     const load = async () => {
       try {
@@ -58,7 +59,7 @@ export default function Home() {
           }
         }
         sdk.actions.ready();
-      } catch (e) { console.error("Init Error:", e); }
+      } catch (e) { console.error("Initialization Error:", e); }
     };
     if (sdk && !isSDKLoaded) { setIsSDKLoaded(true); load(); }
   }, [isSDKLoaded]);
@@ -101,15 +102,18 @@ export default function Home() {
     } catch (e) { setStatus("Error: Connection failed."); }
   };
 
-  // --- OPEN BASE PROFILE ---
-  const openBaseProfile = (address: string) => {
-    if (!address) {
-      alert("No wallet linked for this user.");
-      return;
-    }
-    // Using the official Basenames path on the primary domain to avoid SSL mismatches
-    const profileUrl = `https://www.base.org/names/${address}`;
-    sdk.actions.openUrl(profileUrl);
+  // --- DYNAMIC PROFILE COMPONENT ---
+  // OnchainKit hook'unu burada her kullanıcı için dinamik FID ile çağıracağız
+  const ProfileButton = ({ fid }: { fid: number }) => {
+    const viewProfile = useViewProfile(fid);
+    return (
+      <button 
+        onClick={viewProfile}
+        style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+      >
+        VIEW PROFILE
+      </button>
+    );
   };
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading Houra...</div>;
@@ -159,12 +163,9 @@ export default function Home() {
                 </div>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '12px' }}>{user.bio}</p>
-              <button 
-                onClick={() => openBaseProfile(user.wallet_address)} 
-                style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                GO TO PROFILE
-              </button>
+              
+              {/* Native OnchainKit Profile Trigger */}
+              <ProfileButton fid={Number(user.fid)} />
             </div>
           ))}
         </div>

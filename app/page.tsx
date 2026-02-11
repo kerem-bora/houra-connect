@@ -13,16 +13,6 @@ const TOKEN_ABI = [
     stateMutability: 'view', 
     inputs: [{ name: 'account', type: 'address' }], 
     outputs: [{ name: 'balance', type: 'uint256' }] 
-  },
-  {
-    name: 'transfer',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'value', type: 'uint256' }
-    ],
-    outputs: [{ name: '', type: 'bool' }]
   }
 ] as const;
 
@@ -32,17 +22,12 @@ export default function Home() {
   const [city, setCity] = useState("");
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
-
-  // Search States
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   const { address: wagmiAddress } = useAccount();
   const currentAddress = (wagmiAddress || context?.user?.address || "") as `0x${string}`;
-
-  // --- WAGMI FOR TOKEN TRANSFER ---
-  const { writeContract, isPending: isTxPending } = useWriteContract();
 
   // --- BALANCE READING ---
   const { data: rawBalance, isPending: isBalancePending } = useReadContract({
@@ -63,7 +48,6 @@ export default function Home() {
       try {
         const ctx = await sdk.context;
         setContext(ctx);
-
         if (ctx?.user?.fid) {
           const res = await fetch(`/api/profile?fid=${ctx.user.fid}`);
           const data = await res.json();
@@ -73,13 +57,9 @@ export default function Home() {
           }
         }
         sdk.actions.ready();
-      } catch (e) { console.error("Initialization Error:", e); }
+      } catch (e) { console.error("Init Error:", e); }
     };
-
-    if (sdk && !isSDKLoaded) {
-      setIsSDKLoaded(true);
-      load();
-    }
+    if (sdk && !isSDKLoaded) { setIsSDKLoaded(true); load(); }
   }, [isSDKLoaded]);
 
   // --- SEARCH FUNCTIONALITY ---
@@ -91,24 +71,16 @@ export default function Home() {
           const res = await fetch(`/api/search?q=${searchQuery}`);
           const data = await res.json();
           setSearchResults(data.users || []);
-        } catch (error) {
-          console.error("Search error:", error);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
+        } catch (error) { console.error("Search error:", error); } 
+        finally { setIsSearching(false); }
+      } else { setSearchResults([]); }
     }, 500);
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // --- PROFILE UPDATE FUNCTION ---
+  // --- PROFILE UPDATE ---
   const handleJoinNetwork = async () => {
-    if (!context?.user?.fid) {
-      setStatus("Error: User context not detected.");
-      return;
-    }
+    if (!context?.user?.fid) return;
     setStatus("Saving...");
     try {
       const res = await fetch("/api/profile", {
@@ -124,32 +96,31 @@ export default function Home() {
         }),
       });
       if (res.ok) setStatus("Success! Profile updated. ✅");
-      else setStatus("Error: Database save failed.");
+      else setStatus("Error: Save failed.");
     } catch (e) { setStatus("Error: Connection failed."); }
   };
 
-  // --- OPEN BASE APP PROFILE ---
+  // --- OPEN BASE PROFILE (FIXED SSL LINK) ---
   const openBaseProfile = (address: string) => {
     if (!address) {
-      alert("This user hasn't linked a wallet address yet.");
+      alert("This user has no wallet address.");
       return;
     }
-    // Base App içindeki sosyal ve finansal merkez olan profil linki
-    sdk.actions.openUrl(`https://www.base.eth.xyz/name/${address}`);
+    sdk.actions.openUrl(`https://base.org/name/${address}`);
   };
 
-  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading Houra Network...</div>;
+  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', padding: '50px', textAlign: 'center' }}>Loading...</div>;
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '24px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ marginBottom: '5px' }}>Houra</h1>
-      <p style={{ color: '#666', margin: '0 0 20px 0', fontSize: '0.9rem' }}>Decentralized Time Bank</p>
+      <h1>Houra</h1>
+      <p style={{ color: '#666', margin: '0 0 20px 0', fontSize: '0.9rem' }}>Time Economy</p>
       
       {/* Balance Card */}
       <div style={{ margin: '20px 0', padding: '20px', borderRadius: '15px', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' }}>
         <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 'bold', opacity: 0.8 }}>MY BALANCE</p>
         <h2 style={{ margin: '5px 0 0 0', fontSize: '2rem' }}>
-          {isBalancePending ? "..." : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
+          {isBalancePending ? "0" : formattedBalance} <span style={{ fontSize: '1rem' }}>Houra</span>
         </h2>
       </div>
 
@@ -159,72 +130,39 @@ export default function Home() {
           {city ? `📍 ${city} | Edit Profile` : "👤 Setup Your Profile"}
         </summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-          <input 
-            placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} 
-            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} 
-          />
-          <textarea 
-            placeholder="Your Talents (e.g. Design, Yoga, Math)" value={talents} onChange={(e) => setTalents(e.target.value)} 
-            style={{ width: '100%', padding: '12px', height: '60px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} 
-          />
-          <button 
-            onClick={handleJoinNetwork} disabled={status === "Saving..."}
-            style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer', border: 'none' }}
-          >
-            {status === "Saving..." ? "SAVING..." : "UPDATE PROFILE"}
-          </button>
+          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff' }} />
+          <textarea placeholder="Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ width: '100%', padding: '12px', height: '60px', borderRadius: '8px', border: '1px solid #333', background: '#000', color: '#fff' }} />
+          <button onClick={handleJoinNetwork} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px' }}>UPDATE PROFILE</button>
         </div>
       </details>
 
       <hr style={{ border: '0.5px solid #222', margin: '30px 0' }} />
 
-      {/* Search & Discover Section */}
+      {/* Search Section */}
       <div style={{ marginTop: '20px' }}>
-        <h3 style={{ marginBottom: '15px', fontSize: '1.2rem' }}>Explore & Connect</h3>
-        <input 
-          placeholder="Search name, city or talent..." 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', background: '#000', color: '#fff', boxSizing: 'border-box', marginBottom: '20px' }}
-        />
+        <h3 style={{ marginBottom: '15px' }}>Connect on Base</h3>
+        <input placeholder="Search name, city or talent..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', background: '#000', color: '#fff', marginBottom: '20px' }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {isSearching && <p style={{ textAlign: 'center', color: '#666' }}>Searching network...</p>}
-          
           {searchResults.map((user) => (
             <div key={user.fid} style={{ padding: '15px', background: '#111', borderRadius: '12px', border: '1px solid #222' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <img src={user.avatar_url} style={{ width: '40px', height: '40px', borderRadius: '50%' }} alt="" />
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 'bold' }}>@{user.username}</p>
-                    <p style={{ margin: 0, fontSize: '0.7rem', color: '#666' }}>📍 {user.city || "Earth"}</p>
-                  </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                <img src={user.avatar_url} style={{ width: '40px', height: '40px', borderRadius: '50%' }} alt="" />
+                <div>
+                  <p style={{ margin: 0, fontWeight: 'bold' }}>@{user.username}</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', color: '#666' }}>📍 {user.city || "Earth"}</p>
                 </div>
               </div>
-              
-              <p style={{ fontSize: '0.85rem', color: '#9ca3af', margin: '12px 0' }}>{user.bio}</p>
-              
-              <button 
-                onClick={() => openBaseProfile(user.wallet_address)}
-                style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                OPEN BASE PROFILE
+              <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '12px' }}>{user.bio}</p>
+              <button onClick={() => openBaseProfile(user.wallet_address)} style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>
+                VIEW BASE PROFILE
               </button>
             </div>
           ))}
-
-          {searchQuery.length > 1 && searchResults.length === 0 && !isSearching && (
-            <p style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>No Houra users found.</p>
-          )}
         </div>
       </div>
 
-      {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '10px', textAlign: 'center', fontSize: '0.9rem', zIndex: 100 }}>
-          {status}
-        </div>
-      )}
+      {status && <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '10px', textAlign: 'center' }}>{status}</div>}
     </div>
   );
 }

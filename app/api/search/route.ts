@@ -11,21 +11,33 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
 
-    if (!query || query.length < 2) {
+    // Boş veya çok kısa aramaları engelle
+    if (!query || query.trim().length < 2) {
       return NextResponse.json({ users: [] });
     }
 
-    // Username, City veya Bio (Talents) içinde arama yap
+    // Arama terimini temizle
+    const searchTerm = query.trim();
+
+    // Supabase Sorgusu: 
+    // Username, City (Location) veya Bio (Offer) içinde büyük/küçük harf duyarsız arama yapar.
     const { data, error } = await supabase
       .from('profiles')
       .select('fid, username, avatar_url, city, bio, wallet_address')
-      .or(`username.ilike.%${query}%,city.ilike.%${query}%,bio.ilike.%${query}%`)
+      .or(`username.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
       .limit(10);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase Search Error:", error);
+      throw error;
+    }
 
     return NextResponse.json({ users: data || [] });
-  } catch (error) {
-    return NextResponse.json({ error: "Search failed" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Search API Failure:", error);
+    return NextResponse.json(
+      { error: "Search failed", details: error.message }, 
+      { status: 500 }
+    );
   }
 }

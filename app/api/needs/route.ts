@@ -43,6 +43,7 @@ export async function POST(req: Request) {
           text: text,
           wallet_address: wallet_address,
           price: price 
+    }
       ]);
 
     if (dbError) {

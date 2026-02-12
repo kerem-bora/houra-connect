@@ -15,7 +15,7 @@ const TOKEN_ABI = [
 export default function Home() {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [context, setContext] = useState<any>(null);
-  const [city, setCity] = useState("");
+  const [location, setLocation] = useState("");
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
   
@@ -45,21 +45,19 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- VERİ ÇEKME FONKSİYONU ---
+  // --- DATA FETCHING ---
   const fetchAllData = useCallback(async (fid: number) => {
     try {
-      // 1. Profil Bilgilerini Çek
       const profRes = await fetch(`/api/profile?fid=${fid}`);
       const profData = await profRes.json();
       if (profData.profile) {
-        setCity(profData.profile.city || "");
+        setLocation(profData.profile.city || "");
         setTalents(profData.profile.bio || "");
       }
-      // 2. İhtiyaçları Çek
       const needsRes = await fetch('/api/needs');
       const needsData = await needsRes.json();
       setNeeds(needsData.needs || []);
-    } catch (e) { console.error("Fetch error:", e); }
+    } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => {
@@ -67,9 +65,7 @@ export default function Home() {
       try {
         const ctx = await sdk.context;
         setContext(ctx);
-        if (ctx?.user?.fid) {
-          await fetchAllData(ctx.user.fid);
-        }
+        if (ctx?.user?.fid) await fetchAllData(ctx.user.fid);
         sdk.actions.ready();
         setIsSDKLoaded(true);
       } catch (e) { setIsSDKLoaded(true); }
@@ -77,7 +73,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // --- SEARCH LOGIC ---
+  // --- SEARCH ENGINE ---
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -129,15 +125,13 @@ export default function Home() {
       });
       if (res.ok) {
         setStatus("Need posted! ✅");
-        setNeedText("");
-        setNeedLocation("");
-        // Listeyi tazele
-        const needsRes = await fetch('/api/needs');
-        const needsData = await needsRes.json();
-        setNeeds(needsData.needs || []);
+        setNeedText(""); setNeedLocation("");
+        const nRes = await fetch('/api/needs');
+        const nData = await nRes.json();
+        setNeeds(nData.needs || []);
         setTimeout(() => setStatus(""), 2000);
       }
-    } catch (e) { setStatus("Error posting."); }
+    } catch (e) { setStatus("Error"); }
   };
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
@@ -147,7 +141,7 @@ export default function Home() {
       <h1>Houra</h1>
       <p style={{ color: '#666', fontSize: '0.8rem', marginBottom: '20px' }}>Time Economy</p>
       
-      {/* 1. SEND PANEL (Search Geri Geldi) */}
+      {/* 1. SEND PANEL (Search & Transfer) */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
         {!selectedRecipient ? (
@@ -171,7 +165,7 @@ export default function Home() {
         ) : (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
             <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
-            <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer' }}>Change</button>
+            <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', textDecoration: 'underline' }}>Change</button>
           </div>
         )}
         
@@ -180,18 +174,18 @@ export default function Home() {
           <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Bal: {formattedBalance}</span>
         </div>
 
-        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px', cursor: 'pointer' }}>
+        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>
           SEND {sendAmount} HOURA
         </button>
       </div>
 
-      {/* 2. ADD NEED FORM */}
+      {/* 2. ADD YOUR NEED */}
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input placeholder="Location" value={needLocation} onChange={(e) => setNeedLocation(e.target.value)} style={{ flex: 1, padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-            <button onClick={() => setNeedLocation("Online")} style={{ padding: '0 15px', background: '#2563eb', color: '#fff', borderRadius: '10px', border: 'none', fontSize: '0.8rem' }}>Online</button>
+            <button onClick={() => setNeedLocation("Online")} style={{ padding: '0 15px', background: '#2563eb', color: '#fff', borderRadius: '10px', border: 'none' }}>Online</button>
           </div>
           <textarea placeholder="What do you need?" value={needText} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px', resize: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -199,7 +193,7 @@ export default function Home() {
              <input type="number" value={needPrice} onChange={(e) => setNeedPrice(e.target.value)} style={{ width: '80px', padding: '8px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px' }} />
              <span style={{ fontSize: '0.8rem' }}>Houra</span>
           </div>
-          <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>POST NEED</button>
+          <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>POST NEED</button>
         </div>
       </details>
 
@@ -207,19 +201,19 @@ export default function Home() {
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
-          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-          <textarea placeholder="Bio / Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px', resize: 'none' }} />
+          <input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+          <textarea placeholder="Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px', resize: 'none' }} />
           <button onClick={async () => {
-            await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city, talents, address: currentAddress }) });
+            await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city: location, talents, address: currentAddress }) });
             setStatus("Profile Saved! ✅");
             setTimeout(() => setStatus(""), 2000);
-          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>SAVE PROFILE</button>
+          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>SAVE PROFILE</button>
         </div>
       </details>
 
-      {/* 4. LATEST NEEDS LIST */}
+      {/* 4. LATEST NEEDS */}
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: '#fff' }}>Latest Needs</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '120px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
         {needs.map((need: any, idx: number) => (
           <div key={idx} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -229,7 +223,7 @@ export default function Home() {
             <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc', lineHeight: '1.4' }}>{need.text}</p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>VIEW PROFILE</button>
+               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
             </div>
           </div>
         ))}

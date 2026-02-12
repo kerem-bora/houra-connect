@@ -28,7 +28,7 @@ export default function Home() {
   // Needs State
   const [needLocation, setNeedLocation] = useState("");
   const [needText, setNeedText] = useState("");
-  const [needPrice, setNeedPrice] = useState("1"); // Yeni: Kaç Houra ödül?
+  const [needPrice, setNeedPrice] = useState("1");
   const [needs, setNeeds] = useState<any[]>([]);
 
   const { address: currentAddress } = useAccount();
@@ -45,12 +45,21 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  const fetchNeeds = useCallback(async () => {
+  // --- VERİ ÇEKME FONKSİYONU ---
+  const fetchAllData = useCallback(async (fid: number) => {
     try {
-      const res = await fetch('/api/needs');
-      const data = await res.json();
-      setNeeds(data.needs || []);
-    } catch (e) { console.error(e); }
+      // 1. Profil Bilgilerini Çek
+      const profRes = await fetch(`/api/profile?fid=${fid}`);
+      const profData = await profRes.json();
+      if (profData.profile) {
+        setCity(profData.profile.city || "");
+        setTalents(profData.profile.bio || "");
+      }
+      // 2. İhtiyaçları Çek
+      const needsRes = await fetch('/api/needs');
+      const needsData = await needsRes.json();
+      setNeeds(needsData.needs || []);
+    } catch (e) { console.error("Fetch error:", e); }
   }, []);
 
   useEffect(() => {
@@ -59,22 +68,16 @@ export default function Home() {
         const ctx = await sdk.context;
         setContext(ctx);
         if (ctx?.user?.fid) {
-          const profRes = await fetch(`/api/profile?fid=${ctx.user.fid}`);
-          const profData = await profRes.json();
-          if (profData.profile) {
-            setCity(profData.profile.city || "");
-            setTalents(profData.profile.bio || "");
-          }
+          await fetchAllData(ctx.user.fid);
         }
-        await fetchNeeds();
         sdk.actions.ready();
         setIsSDKLoaded(true);
       } catch (e) { setIsSDKLoaded(true); }
     };
     init();
-  }, [fetchNeeds]);
+  }, [fetchAllData]);
 
-  // Search logic
+  // --- SEARCH LOGIC ---
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -121,16 +124,20 @@ export default function Home() {
           location: needLocation,
           text: needText,
           wallet_address: currentAddress,
-          price: needPrice // Ödül gönderiliyor
+          price: needPrice
         }),
       });
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText("");
         setNeedLocation("");
-        fetchNeeds();
+        // Listeyi tazele
+        const needsRes = await fetch('/api/needs');
+        const needsData = await needsRes.json();
+        setNeeds(needsData.needs || []);
+        setTimeout(() => setStatus(""), 2000);
       }
-    } catch (e) { setStatus("Error"); }
+    } catch (e) { setStatus("Error posting."); }
   };
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
@@ -138,8 +145,9 @@ export default function Home() {
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>Houra</h1>
+      <p style={{ color: '#666', fontSize: '0.8rem', marginBottom: '20px' }}>Time Economy</p>
       
-      {/* 1. SEND PANEL - Taşma Sorunu Düzeltildi */}
+      {/* 1. SEND PANEL (Search Geri Geldi) */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
         {!selectedRecipient ? (
@@ -151,70 +159,84 @@ export default function Home() {
               style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none', boxSizing: 'border-box' }}
             />
             {searchResults.length > 0 && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#111', borderRadius: '12px', marginTop: '5px', zIndex: 100, border: '1px solid #333' }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#111', borderRadius: '12px', marginTop: '5px', zIndex: 100, border: '1px solid #333', maxHeight: '150px', overflowY: 'auto' }}>
                 {searchResults.map(user => (
-                  <div key={user.fid} onClick={() => setSelectedRecipient(user)} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
-                    @{user.username}
+                  <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>@{user.username}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
-            <span>@{selectedRecipient.username}</span>
-            <button onClick={() => setSelectedRecipient(null)} style={{ color: '#fff', background: 'none', border: 'none', textDecoration: 'underline' }}>Change</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
+            <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
+            <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer' }}>Change</button>
           </div>
         )}
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
           <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ width: '50%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none' }} />
-          <span style={{ fontSize: '0.7rem' }}>Bal: {formattedBalance}</span>
+          <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Bal: {formattedBalance}</span>
         </div>
 
-        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>
+        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px', cursor: 'pointer' }}>
           SEND {sendAmount} HOURA
         </button>
       </div>
 
-      {/* 2. ADD NEED FORM - Ödül (Price) Eklendi */}
+      {/* 2. ADD NEED FORM */}
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input placeholder="Location" value={needLocation} onChange={(e) => setNeedLocation(e.target.value)} style={{ flex: 1, padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-            <button onClick={() => setNeedLocation("Online")} style={{ padding: '0 10px', background: '#2563eb', color: '#fff', borderRadius: '10px', border: 'none' }}>Online</button>
+            <button onClick={() => setNeedLocation("Online")} style={{ padding: '0 15px', background: '#2563eb', color: '#fff', borderRadius: '10px', border: 'none', fontSize: '0.8rem' }}>Online</button>
           </div>
-          <textarea placeholder="What do you need?" value={needText} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
+          <textarea placeholder="What do you need?" value={needText} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px', resize: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
              <label style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Reward:</label>
              <input type="number" value={needPrice} onChange={(e) => setNeedPrice(e.target.value)} style={{ width: '80px', padding: '8px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px' }} />
              <span style={{ fontSize: '0.8rem' }}>Houra</span>
           </div>
-          <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>POST NEED</button>
+          <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>POST NEED</button>
         </div>
       </details>
 
-      {/* 3. LATEST NEEDS LIST */}
-      <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
+      {/* 3. PROFILE SETTINGS */}
+      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+          <textarea placeholder="Bio / Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px', resize: 'none' }} />
+          <button onClick={async () => {
+            await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city, talents, address: currentAddress }) });
+            setStatus("Profile Saved! ✅");
+            setTimeout(() => setStatus(""), 2000);
+          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>SAVE PROFILE</button>
+        </div>
+      </details>
+
+      {/* 4. LATEST NEEDS LIST */}
+      <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: '#fff' }}>Latest Needs</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '120px' }}>
         {needs.map((need: any, idx: number) => (
           <div key={idx} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
-              <span style={{ color: '#2563eb', fontWeight: 'bold' }}>💰 {need.price || "0"} Houra</span>
+              <span style={{ color: '#2563eb', fontWeight: 'bold' }}>💰 {need.price || "1"} Houra</span>
             </div>
-            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc', lineHeight: '1.4' }}>{need.text}</p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>VIEW PROFILE</button>
             </div>
           </div>
         ))}
       </div>
 
       {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 1000 }}>
           {status}
         </div>
       )}

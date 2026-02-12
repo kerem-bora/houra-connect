@@ -27,7 +27,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { fid, username, location, text, wallet_address } = body;
+    const { fid, username, location, text, wallet_address, price } = body; // price eklendi
 
     if (!fid || !text || !wallet_address) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -41,8 +41,8 @@ export async function POST(req: Request) {
           username: username, 
           location: location || "Global", 
           text: text,
-          wallet_address: wallet_address 
-        }
+          wallet_address: wallet_address,
+          price: price 
       ]);
 
     if (dbError) {

@@ -18,9 +18,12 @@ export default function Home() {
   const [city, setCity] = useState("");
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
+  
+  // Gönderim State'leri
+  const [sendAmount, setSendAmount] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [sendAmount, setSendAmount] = useState("1"); // Manuel miktar
+  const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
 
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
@@ -37,7 +40,7 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- SDK & PROFİL VERİSİNİ ÇEKME (TAMİR EDİLDİ) ---
+  // --- SDK & PROFİL ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -60,12 +63,29 @@ export default function Home() {
     init();
   }, []);
 
-  // --- TRANSFER FONKSİYONU ---
-  const handleTransfer = useCallback(async (recipientAddress: string, amount: string) => {
-    if (!recipientAddress) return setStatus("Error: No address found.");
+  // --- ARAMA (Sadece Houra Kayıtlı Kullanıcılar) ---
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.length > 1) {
+        const res = await fetch(`/api/search?q=${searchQuery}`);
+        const data = await res.json();
+        setSearchResults(data.users || []);
+      } else {
+        setSearchResults([]);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // --- TRANSFER ---
+  const handleTransfer = useCallback(async () => {
+    if (!selectedRecipient?.wallet_address) {
+      setStatus("Please select a recipient from search results.");
+      return;
+    }
     try {
-      setStatus("Confirming transfer...");
-      const parsedAmount = parseUnits(amount, 18); 
+      setStatus(`Sending ${sendAmount} Houra to @${selectedRecipient.username}...`);
+      const parsedAmount = parseUnits(sendAmount, 18); 
 
       sendCalls({
         calls: [{
@@ -73,52 +93,21 @@ export default function Home() {
           data: encodeFunctionData({
             abi: TOKEN_ABI,
             functionName: 'transfer',
-            args: [recipientAddress as `0x${string}`, parsedAmount],
+            args: [selectedRecipient.wallet_address as `0x${string}`, parsedAmount],
           }),
           value: 0n,
         }],
       }, {
         onSuccess: () => {
-          setStatus(`Success! ${amount} Houra sent. ✅`);
-          setTimeout(() => refetchBalance(), 3000);
+          setStatus("Transfer Successful! ✅");
+          setSelectedRecipient(null);
+          setSearchQuery("");
+          setTimeout(() => { setStatus(""); refetchBalance(); }, 3000);
         },
-        onError: () => setStatus("Transfer failed.")
+        onError: () => setStatus("Transaction failed.")
       });
-    } catch (e) { setStatus("Invalid amount."); }
-  }, [sendCalls, refetchBalance]);
-
-  // --- PROFİL GÜNCELLEME ---
-  const handleUpdate = async () => {
-    if (!context?.user?.fid) return;
-    setStatus("Updating...");
-    try {
-      await fetch("/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fid: context.user.fid,
-          username: context.user.username,
-          pfp: context.user.pfpUrl,
-          city,
-          talents,
-          address: currentAddress 
-        }),
-      });
-      setStatus("Profile Saved! ✅");
-    } catch (e) { setStatus("Save failed."); }
-  };
-
-  // --- ARAMA ---
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchQuery.length > 1) {
-        const res = await fetch(`/api/search?q=${searchQuery}`);
-        const data = await res.json();
-        setSearchResults(data.users || []);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    } catch (e) { setStatus("Check amount and try again."); }
+  }, [sendCalls, refetchBalance, selectedRecipient, sendAmount]);
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
@@ -127,59 +116,89 @@ export default function Home() {
       <h1>Houra</h1>
       <p style={{ color: '#666', fontSize: '0.8rem', marginBottom: '20px' }}>Time Economy</p>
       
-      {/* --- YENİ TRANSFER PANELİ --- */}
-      <div style={{ padding: '20px', borderRadius: '15px', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', marginBottom: '25px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 'bold' }}>TRANSFER PANEL</p>
-          <p style={{ margin: 0, fontSize: '0.7rem' }}>My balance: <b>{formattedBalance}</b></p>
-        </div>
+      {/* --- GÖNDERİM PANELİ --- */}
+      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
         
-        <div style={{ marginTop: '15px' }}>
-          <input 
-            type="number" 
-            value={sendAmount} 
-            onChange={(e) => setSendAmount(e.target.value)}
-            style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: '1.5rem', padding: '10px', borderRadius: '8px', textAlign: 'center' }}
-            placeholder="0.0"
-          />
-          <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
-            {["0.5", "1", "2"].map(amt => (
-              <button key={amt} onClick={() => setSendAmount(amt)} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', cursor: 'pointer' }}>{amt}</button>
-            ))}
-          </div>
+        {/* Recipient Search / Selector */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ fontSize: '0.7rem', fontWeight: 'bold', opacity: 0.8, display: 'block', marginBottom: '8px' }}>RECIPIENT</label>
+          {!selectedRecipient ? (
+            <div style={{ position: 'relative' }}>
+              <input 
+                placeholder="Search Houra users..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none' }}
+              />
+              {searchResults.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#111', borderRadius: '12px', marginTop: '5px', zIndex: 10, border: '1px solid #333', maxHeight: '200px', overflowY: 'auto' }}>
+                  {searchResults.map(user => (
+                    <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
+                      <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>@{user.username}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', opacity: 0.6 }}>{user.city || "Global"}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
+              <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
+              <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>Change</button>
+            </div>
+          )}
         </div>
+
+        {/* Amount Input */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '15px' }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: '0.7rem', fontWeight: 'bold', opacity: 0.8, display: 'block', marginBottom: '5px' }}>AMOUNT (Houra)</label>
+            <input 
+              type="number" 
+              value={sendAmount} 
+              onChange={(e) => setSendAmount(e.target.value)}
+              style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none', padding: 0 }}
+            />
+          </div>
+          <span style={{ fontSize: '0.7rem', opacity: 0.8, marginBottom: '5px' }}>Bal: <b>{formattedBalance}</b></span>
+        </div>
+
+        {/* Quick Amounts */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          {["0.5", "1", "2"].map(amt => (
+            <button key={amt} onClick={() => setSendAmount(amt)} style={{ flex: 1, padding: '8px', borderRadius: '10px', background: sendAmount === amt ? '#fff' : 'rgba(255,255,255,0.15)', color: sendAmount === amt ? '#000' : '#fff', border: 'none', fontWeight: 'bold' }}>{amt}</button>
+          ))}
+        </div>
+
+        {/* Action Button */}
+        <button 
+          onClick={handleTransfer}
+          disabled={!selectedRecipient}
+          style={{ width: '100%', padding: '16px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', fontSize: '1rem', border: 'none', cursor: selectedRecipient ? 'pointer' : 'not-allowed' }}
+        >
+          {selectedRecipient ? `SEND ${sendAmount} HOURA` : "SELECT RECIPIENT"}
+        </button>
       </div>
 
-      {/* --- PROFİL EDİT (Fixed) --- */}
-      <details style={{ background: '#111', padding: '10px', borderRadius: '10px', marginBottom: '25px' }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>{city ? `📍 ${city} | Edit Profile` : "👤 Setup Your Profile"}</summary>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px' }} />
-          <textarea placeholder="Bio / Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px', height: '60px' }} />
-          <button onClick={handleUpdate} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '8px' }}>SAVE CHANGES</button>
+      {/* --- PROFİL EDİT --- */}
+      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af', fontSize: '0.85rem' }}>⚙️ Profile Settings</summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+          <textarea placeholder="Bio / Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px', resize: 'none' }} />
+          <button onClick={async () => {
+            await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city, talents, address: currentAddress }) });
+            setStatus("Profile Updated! ✅");
+            setTimeout(() => setStatus(""), 2000);
+          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>UPDATE PROFILE</button>
         </div>
       </details>
 
-      {/* --- ARAMA VE LİSTE --- */}
-      <input placeholder="Find people to send Houra..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#000', color: '#fff', border: '1px solid #2563eb', boxSizing: 'border-box' }} />
-
-      <div style={{ marginTop: '20px' }}>
-        {searchResults.map((user) => (
-          <div key={user.fid} style={{ padding: '15px', background: '#111', borderRadius: '12px', marginBottom: '10px', border: '1px solid #222' }}>
-            <p style={{ margin: 0, fontWeight: 'bold' }}>@{user.username} 📍 {user.city || "Global"}</p>
-            <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '5px 0 12px 0' }}>{user.bio}</p>
-            
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ flex: 1, padding: '10px', background: '#333', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>PROFILE</button>
-              <button onClick={() => handleTransfer(user.wallet_address, sendAmount)} style={{ flex: 2, padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
-                SEND {sendAmount} HOURA
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {status && <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '10px', textAlign: 'center', fontSize: '0.8rem', zIndex: 100 }}>{status}</div>}
+      {status && (
+        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', fontSize: '0.85rem', zIndex: 1000 }}>
+          {status}
+        </div>
+      )}
     </div>
   );
 }

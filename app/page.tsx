@@ -16,20 +16,17 @@ export default function Home() {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [context, setContext] = useState<any>(null);
   const [location, setLocation] = useState("");
-  const [offer, setOffer] = useState(""); // Talents -> Offer
+  const [offer, setOffer] = useState("");
   const [status, setStatus] = useState("");
+  const [isAboutOpen, setIsAboutOpen] = useState(false); // Modal state
   
-  // Transfer Search State
+  // States... (Transfer, Offer Search, Needs aynı kalıyor)
   const [sendAmount, setSendAmount] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
-
-  // Offers Search State (Yeni Bölüm)
   const [offerQuery, setOfferQuery] = useState("");
   const [offerResults, setOfferResults] = useState<any[]>([]);
-
-  // Needs State
   const [needLocation, setNeedLocation] = useState("");
   const [needText, setNeedText] = useState("");
   const [needPrice, setNeedPrice] = useState("1");
@@ -76,7 +73,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // Transfer Search Logic
+  // Search Logics... (Aynı kalıyor)
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -88,7 +85,6 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Offer Search Logic (Yeni)
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (offerQuery.length > 1) {
@@ -152,12 +148,49 @@ export default function Home() {
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       
-      {/* HEADER */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '5px' }}>
-        <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-        <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
+      {/* HEADER WITH LOGO & ABOUT BUTTON */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+          <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
+        </div>
+        <button 
+          onClick={() => setIsAboutOpen(true)}
+          style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          ?
+        </button>
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
+
+      {/* ABOUT MODAL */}
+      {isAboutOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative' }}>
+            <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
+            <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
+              Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based currency.
+            </p>
+            <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <p>📍 <strong>Profile:</strong> Set your location and what you offer.</p>
+              <p>💰 <strong>Earn:</strong> Help others and earn Houra tokens.</p>
+              <p>🛠️ <strong>Post:</strong> Share your needs and reward helpers.</p>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#666' }}>
+              Learn more about 
+              <a href="https://en.wikipedia.org/wiki/Time-based_currency" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
+                Time-based Currencies
+              </a>
+            </p>
+            <button 
+              onClick={() => setIsAboutOpen(false)}
+              style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* 1. SEND PANEL */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
@@ -189,15 +222,10 @@ export default function Home() {
         <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
       </div>
 
-      {/* 2. SEARCH FOR OFFERS (YENİ EKİLEN BÖLÜM) */}
+      {/* 2. SEARCH FOR OFFERS */}
       <div style={{ marginBottom: '20px' }}>
         <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: '#fff' }}>Search for Offers</h3>
-        <input 
-          placeholder="Search skill, location or user..." 
-          value={offerQuery}
-          onChange={(e) => setOfferQuery(e.target.value)}
-          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff', boxSizing: 'border-box' }}
-        />
+        <input placeholder="Search skill, location or user..." value={offerQuery} onChange={(e) => setOfferQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff', boxSizing: 'border-box' }} />
         {offerResults.length > 0 && (
           <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {offerResults.map(user => (

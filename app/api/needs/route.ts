@@ -1,50 +1,58 @@
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv"; // Vercel KV (Redis) veya Postgres/Supabase kullanabilirsin. 
-// Burada en hızlısı ve basit olan KV örneği üzerinden gidiyorum.
+import { createClient } from "@supabase/supabase-js";
 
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// --- İHTİYAÇLARI LİSTELE (READ) ---
 export async function GET() {
   try {
-    // Tüm ihtiyaçları "needs" anahtarından çekiyoruz
-    const needs = await kv.get("houra_needs") as any[];
-    
-    // Eğer liste boşsa boş dizi döndür, varsa yeniden eskiye sırala
-    const sortedNeeds = needs ? needs.reverse() : [];
-    
-    return NextResponse.json({ needs: sortedNeeds });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch needs" }, { status: 500 });
+    const { data, error } = await supabase
+      .from('needs')
+      .select('*')
+      .order('created_at', { ascending: false }); // Yeniden eskiye sıralama
+
+    if (error) throw error;
+
+    return NextResponse.json({ needs: data });
+  } catch (error: any) {
+    console.error("Fetch Needs Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
+// --- YENİ İHTİYAÇ EKLE (INSERT) ---
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { fid, username, location, text } = body;
+    const { fid, username, location, text, wallet_address } = body;
 
-    if (!text || !fid) {
+    if (!fid || !text || !wallet_address) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Mevcut ihtiyaçları çek
-    const existingNeeds = await kv.get("houra_needs") as any[] || [];
+    const { error: dbError } = await supabase
+      .from('needs')
+      .insert([
+        { 
+          fid: fid, 
+          username: username, 
+          location: location || "Global", 
+          text: text,
+          wallet_address: wallet_address 
+        }
+      ]);
 
-    const newNeed = {
-      fid,
-      username,
-      location: location || "Global",
-      text,
-      createdAt: new Date().toISOString()
-    };
+    if (dbError) {
+      console.error("Supabase Error:", dbError);
+      return NextResponse.json({ error: "Failed to post need" }, { status: 500 });
+    }
 
-    // Yeni ihtiyacı en başa ekle veya listeye pushla
-    const updatedNeeds = [...existingNeeds, newNeed];
-    
-    // Veritabanına kaydet
-    await kv.set("houra_needs", updatedNeeds);
-
-    return NextResponse.json({ success: true, need: newNeed });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("API Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("Server Error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

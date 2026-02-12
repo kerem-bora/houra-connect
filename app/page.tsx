@@ -216,28 +216,34 @@ export default function Home() {
       </details>
 
       {/* --- NEEDS MARKETPLACE --- */}
-      <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', paddingLeft: '5px' }}>Marketplace</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '120px' }}>
-        {needs.map((need: any, idx: number) => (
-          <div key={idx} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span style={{ fontWeight: 'bold', color: '#fff' }}>@{need.username}</span>
-                <span style={{ marginLeft: '10px', fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-              </div>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.95rem', color: '#ccc', lineHeight: '1.4' }}>{need.text}</p>
-            
-            {/* SEND HOURA Butonu - İhtiyacı olan kişiye yönlendirir */}
-            <button 
-              onClick={() => selectRecipientFromNeed(need)}
-              style={{ alignSelf: 'flex-start', padding: '8px 16px', borderRadius: '8px', background: '#2563eb', color: '#fff', border: 'none', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}
-            >
-              SEND HOURA
-            </button>
-          </div>
-        ))}
+<h3 style={{ fontSize: '1.1rem', marginBottom: '15px', paddingLeft: '5px' }}>Latest Needs</h3>
+<div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '120px' }}>
+  {needs.length === 0 && <p style={{ color: '#444', textAlign: 'center' }}>No needs posted yet.</p>}
+  {needs.map((need: any, idx: number) => (
+    <div key={idx} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <span style={{ fontWeight: 'bold', color: '#fff' }}>@{need.username}</span>
+          <span style={{ marginLeft: '10px', fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+        </div>
+        {/* Kullanıcının Farcaster profilini Base App içinde açar */}
+        <button 
+          onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })}
+          style={{ background: 'transparent', color: '#2563eb', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
+        >
+          VIEW PROFILE
+        </button>
       </div>
+      <p style={{ margin: 0, fontSize: '0.95rem', color: '#ccc', lineHeight: '1.4' }}>{need.text}</p>
+      
+      <div style={{ borderTop: '1px solid #222', paddingTop: '10px', marginTop: '5px' }}>
+        <p style={{ margin: 0, fontSize: '0.7rem', color: '#444' }}>
+          Posted on {new Date(need.created_at).toLocaleDateString()}
+        </p>
+      </div>
+    </div>
+  ))}
+</div>
 
       {status && (
         <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 1000, boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }}>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
 import { useReadContract, useAccount } from 'wagmi';
 import { useSendCalls } from 'wagmi/experimental'; 
@@ -19,11 +19,17 @@ export default function Home() {
   const [talents, setTalents] = useState("");
   const [status, setStatus] = useState("");
   
-  // Gönderim State'leri
+  // Transfer State
   const [sendAmount, setSendAmount] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
+  const transferPanelRef = useRef<HTMLDivElement>(null);
+
+  // Needs State
+  const [needLocation, setNeedLocation] = useState("");
+  const [needText, setNeedText] = useState("");
+  const [needs, setNeeds] = useState<any[]>([]);
 
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
@@ -40,7 +46,16 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- SDK & PROFİL ---
+  // --- FETCH NEEDS ---
+  const fetchNeeds = async () => {
+    try {
+      const res = await fetch('/api/needs');
+      const data = await res.json();
+      setNeeds(data.needs || []);
+    } catch (e) { console.error("Needs error", e); }
+  };
+
+  // --- SDK INIT ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -56,6 +71,7 @@ export default function Home() {
             }
           }
         }
+        await fetchNeeds();
         sdk.actions.ready();
         setIsSDKLoaded(true);
       } catch (e) { setIsSDKLoaded(true); }
@@ -63,79 +79,106 @@ export default function Home() {
     init();
   }, []);
 
-  // --- ARAMA (Sadece Houra Kayıtlı Kullanıcılar) ---
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchQuery.length > 1) {
-        const res = await fetch(`/api/search?q=${searchQuery}`);
-        const data = await res.json();
-        setSearchResults(data.users || []);
-      } else {
-        setSearchResults([]);
+  // --- İHTİYAÇ EKLEME ---
+  const handleAddNeed = async () => {
+    if (!needText) return setStatus("Please write your need.");
+    setStatus("Posting...");
+    try {
+      // Not: API'de wallet_address'e de ihtiyacımız var ki başkaları gönderebilsin
+      const res = await fetch("/api/needs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fid: context.user.fid,
+          username: context.user.username,
+          location: needLocation,
+          text: needText,
+          wallet_address: currentAddress // Alıcı adresi buraya kaydediyoruz
+        }),
+      });
+      if (res.ok) {
+        setStatus("Need posted! ✅");
+        setNeedText("");
+        setNeedLocation("");
+        fetchNeeds();
+        setTimeout(() => setStatus(""), 2000);
       }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    } catch (e) { setStatus("Error posting need."); }
+  };
+
+  // --- AUTO-FILL RECIPIENT ---
+  const selectRecipientFromNeed = (need: any) => {
+    setSelectedRecipient({
+      username: need.username,
+      wallet_address: need.wallet_address
+    });
+    // Paneli görünür yapmak için yukarı kaydır
+    transferPanelRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setStatus(`Recipient: @${need.username} selected.`);
+    setTimeout(() => setStatus(""), 2000);
+  };
 
   // --- TRANSFER ---
   const handleTransfer = useCallback(async () => {
-    if (!selectedRecipient?.wallet_address) {
-      setStatus("Please select a recipient from search results.");
-      return;
-    }
+    if (!selectedRecipient?.wallet_address) return setStatus("Select a recipient.");
     try {
-      setStatus(`Sending ${sendAmount} Houra to @${selectedRecipient.username}...`);
-      const parsedAmount = parseUnits(sendAmount, 18); 
-
+      setStatus(`Processing...`);
       sendCalls({
         calls: [{
           to: HOURA_TOKEN_ADDRESS as `0x${string}`,
           data: encodeFunctionData({
             abi: TOKEN_ABI,
             functionName: 'transfer',
-            args: [selectedRecipient.wallet_address as `0x${string}`, parsedAmount],
+            args: [selectedRecipient.wallet_address as `0x${string}`, parseUnits(sendAmount, 18)],
           }),
           value: 0n,
         }],
       }, {
         onSuccess: () => {
-          setStatus("Transfer Successful! ✅");
+          setStatus("Success! ✅");
           setSelectedRecipient(null);
-          setSearchQuery("");
           setTimeout(() => { setStatus(""); refetchBalance(); }, 3000);
         },
-        onError: () => setStatus("Transaction failed.")
+        onError: () => setStatus("Rejected.")
       });
-    } catch (e) { setStatus("Check amount and try again."); }
+    } catch (e) { setStatus("Error."); }
   }, [sendCalls, refetchBalance, selectedRecipient, sendAmount]);
+
+  // Arama debouncing
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.length > 1) {
+        const res = await fetch(`/api/search?q=${searchQuery}`);
+        const data = await res.json();
+        setSearchResults(data.users || []);
+      } else setSearchResults([]);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>Houra</h1>
-      <p style={{ color: '#666', fontSize: '0.8rem', marginBottom: '20px' }}>Time Economy</p>
       
-      {/* --- GÖNDERİM PANELİ --- */}
-      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-        
-        {/* Recipient Search / Selector */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '0.7rem', fontWeight: 'bold', opacity: 0.8, display: 'block', marginBottom: '8px' }}>RECIPIENT</label>
+      {/* --- ANA TRANSFER PANELİ --- */}
+      <div ref={transferPanelRef} style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ fontSize: '0.7rem', fontWeight: 'bold', opacity: 0.8, display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
           {!selectedRecipient ? (
             <div style={{ position: 'relative' }}>
               <input 
-                placeholder="Search Houra users..." 
+                placeholder="Search users..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none' }}
               />
               {searchResults.length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#111', borderRadius: '12px', marginTop: '5px', zIndex: 10, border: '1px solid #333', maxHeight: '200px', overflowY: 'auto' }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#111', borderRadius: '12px', marginTop: '5px', border: '1px solid #333', maxHeight: '150px', overflowY: 'auto', zIndex: 100 }}>
                   {searchResults.map(user => (
                     <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
                       <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>@{user.username}</p>
-                      <p style={{ margin: 0, fontSize: '0.7rem', opacity: 0.6 }}>{user.city || "Global"}</p>
                     </div>
                   ))}
                 </div>
@@ -144,58 +187,60 @@ export default function Home() {
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
               <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
-              <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>Change</button>
+              <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.8rem' }}>Change</button>
             </div>
           )}
         </div>
 
-        {/* Amount Input */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '15px' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '0.7rem', fontWeight: 'bold', opacity: 0.8, display: 'block', marginBottom: '5px' }}>AMOUNT (Houra)</label>
-            <input 
-              type="number" 
-              value={sendAmount} 
-              onChange={(e) => setSendAmount(e.target.value)}
-              style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none', padding: 0 }}
-            />
-          </div>
-          <span style={{ fontSize: '0.7rem', opacity: 0.8, marginBottom: '5px' }}>Bal: <b>{formattedBalance}</b></span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ width: '50%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none' }} />
+          <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Balance: {formattedBalance}</span>
         </div>
 
-        {/* Quick Amounts */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-          {["0.5", "1", "2"].map(amt => (
-            <button key={amt} onClick={() => setSendAmount(amt)} style={{ flex: 1, padding: '8px', borderRadius: '10px', background: sendAmount === amt ? '#fff' : 'rgba(255,255,255,0.15)', color: sendAmount === amt ? '#000' : '#fff', border: 'none', fontWeight: 'bold' }}>{amt}</button>
-          ))}
-        </div>
-
-        {/* Action Button */}
-        <button 
-          onClick={handleTransfer}
-          disabled={!selectedRecipient}
-          style={{ width: '100%', padding: '16px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', fontSize: '1rem', border: 'none', cursor: selectedRecipient ? 'pointer' : 'not-allowed' }}
-        >
-          {selectedRecipient ? `SEND ${sendAmount} HOURA` : "SELECT RECIPIENT"}
+        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '15px', cursor: 'pointer' }}>
+          SEND {sendAmount} HOURA
         </button>
       </div>
 
-      {/* --- PROFİL EDİT --- */}
-      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af', fontSize: '0.85rem' }}>⚙️ Profile Settings</summary>
+      {/* --- ADD YOUR NEED --- */}
+      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '30px', border: '1px solid #222' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
-          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-          <textarea placeholder="Bio / Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px', resize: 'none' }} />
-          <button onClick={async () => {
-            await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city, talents, address: currentAddress }) });
-            setStatus("Profile Updated! ✅");
-            setTimeout(() => setStatus(""), 2000);
-          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>UPDATE PROFILE</button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input placeholder="Location" value={needLocation} onChange={(e) => setNeedLocation(e.target.value)} style={{ flex: 1, padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+            <button onClick={() => setNeedLocation("Online")} style={{ padding: '0 15px', background: '#2563eb', color: '#fff', borderRadius: '10px', border: 'none', fontSize: '0.8rem' }}>Online</button>
+          </div>
+          <textarea placeholder="Tell us what you need..." value={needText} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '80px', resize: 'none' }} />
+          <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>POST NEED</button>
         </div>
       </details>
 
+      {/* --- NEEDS MARKETPLACE --- */}
+      <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', paddingLeft: '5px' }}>Marketplace</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '120px' }}>
+        {needs.map((need: any, idx: number) => (
+          <div key={idx} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontWeight: 'bold', color: '#fff' }}>@{need.username}</span>
+                <span style={{ marginLeft: '10px', fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+              </div>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.95rem', color: '#ccc', lineHeight: '1.4' }}>{need.text}</p>
+            
+            {/* SEND HOURA Butonu - İhtiyacı olan kişiye yönlendirir */}
+            <button 
+              onClick={() => selectRecipientFromNeed(need)}
+              style={{ alignSelf: 'flex-start', padding: '8px 16px', borderRadius: '8px', background: '#2563eb', color: '#fff', border: 'none', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              SEND HOURA
+            </button>
+          </div>
+        ))}
+      </div>
+
       {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', fontSize: '0.85rem', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 1000, boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }}>
           {status}
         </div>
       )}

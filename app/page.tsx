@@ -1,9 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
-import { useReadContract, useAccount, useConfig } from 'wagmi';
-// OnchainKit veya Wagmi'den sendCalls kullanabiliriz, 
-// Base Mini App için wagmi/experimental içindeki hook en temizidir.
+import { useReadContract, useAccount } from 'wagmi';
 import { useSendCalls } from 'wagmi/experimental'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
@@ -22,6 +20,7 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [sendAmount, setSendAmount] = useState("1"); // Manuel miktar
 
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
@@ -38,7 +37,7 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- SDK INIT ---
+  // --- SDK & PROFİL VERİSİNİ ÇEKME (TAMİR EDİLDİ) ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -46,10 +45,12 @@ export default function Home() {
         setContext(ctx);
         if (ctx?.user?.fid) {
           const res = await fetch(`/api/profile?fid=${ctx.user.fid}`);
-          const data = await res.json();
-          if (data.profile) {
-            setCity(data.profile.city || "");
-            setTalents(data.profile.bio || "");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.profile) {
+              setCity(data.profile.city || "");
+              setTalents(data.profile.bio || "");
+            }
           }
         }
         sdk.actions.ready();
@@ -60,50 +61,52 @@ export default function Home() {
   }, []);
 
   // --- TRANSFER FONKSİYONU ---
-  const handleTransfer = useCallback(async (recipientAddress: string) => {
-    if (!recipientAddress) {
-      setStatus("Error: Recipient has no wallet.");
-      return;
-    }
-
+  const handleTransfer = useCallback(async (recipientAddress: string, amount: string) => {
+    if (!recipientAddress) return setStatus("Error: No address found.");
     try {
-      setStatus("Requesting transfer...");
-      
-      // 1 Houra transfer edelim (Test için sabit, istersen input ekleyebilirsin)
-      const amount = parseUnits("1", 18); 
+      setStatus("Confirming transfer...");
+      const parsedAmount = parseUnits(amount, 18); 
 
       sendCalls({
-        calls: [
-          {
-            to: HOURA_TOKEN_ADDRESS as `0x${string}`,
-            data: encodeFunctionData({
-              abi: TOKEN_ABI,
-              functionName: 'transfer',
-              args: [recipientAddress as `0x${string}`, amount],
-            }),
-            value: 0n,
-          },
-        ],
-        capabilities: {
-          paymasterService: {
-            // Opsiyonel: Eğer ilerde gasless (ücretsiz) işlem yapmak istersen burası kullanılır
-            url: "https://api.developer.coinbase.com/rpc/v1/base/YOUR_ID" 
-          }
-        }
+        calls: [{
+          to: HOURA_TOKEN_ADDRESS as `0x${string}`,
+          data: encodeFunctionData({
+            abi: TOKEN_ABI,
+            functionName: 'transfer',
+            args: [recipientAddress as `0x${string}`, parsedAmount],
+          }),
+          value: 0n,
+        }],
       }, {
-        onSuccess: (id) => {
-          setStatus("Success! Houra sent. ✅");
-          setTimeout(() => refetchBalance(), 3000); // Bakiyeyi güncelle
+        onSuccess: () => {
+          setStatus(`Success! ${amount} Houra sent. ✅`);
+          setTimeout(() => refetchBalance(), 3000);
         },
-        onError: (err) => {
-          console.error(err);
-          setStatus("Transfer failed or rejected.");
-        }
+        onError: () => setStatus("Transfer failed.")
       });
-    } catch (e) {
-      setStatus("Transaction error.");
-    }
+    } catch (e) { setStatus("Invalid amount."); }
   }, [sendCalls, refetchBalance]);
+
+  // --- PROFİL GÜNCELLEME ---
+  const handleUpdate = async () => {
+    if (!context?.user?.fid) return;
+    setStatus("Updating...");
+    try {
+      await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fid: context.user.fid,
+          username: context.user.username,
+          pfp: context.user.pfpUrl,
+          city,
+          talents,
+          address: currentAddress 
+        }),
+      });
+      setStatus("Profile Saved! ✅");
+    } catch (e) { setStatus("Save failed."); }
+  };
 
   // --- ARAMA ---
   useEffect(() => {
@@ -117,57 +120,66 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', marginTop: '50px' }}>Loading Houra...</div>;
+  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>Houra</h1>
-      <p style={{ color: '#666', fontSize: '0.8rem' }}>Time Economy</p>
+      <p style={{ color: '#666', fontSize: '0.8rem', marginBottom: '20px' }}>Time Economy</p>
       
-      {/* Bakiye Kartı */}
+      {/* --- YENİ TRANSFER PANELİ --- */}
       <div style={{ padding: '20px', borderRadius: '15px', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', marginBottom: '25px' }}>
-        <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 'bold' }}>MY BALANCE</p>
-        <h2 style={{ margin: '5px 0 0 0' }}>{formattedBalance} Houra</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 'bold' }}>TRANSFER PANEL</p>
+          <p style={{ margin: 0, fontSize: '0.7rem' }}>My balance: <b>{formattedBalance}</b></p>
+        </div>
+        
+        <div style={{ marginTop: '15px' }}>
+          <input 
+            type="number" 
+            value={sendAmount} 
+            onChange={(e) => setSendAmount(e.target.value)}
+            style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: '1.5rem', padding: '10px', borderRadius: '8px', textAlign: 'center' }}
+            placeholder="0.0"
+          />
+          <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
+            {["0.5", "1", "2"].map(amt => (
+              <button key={amt} onClick={() => setSendAmount(amt)} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', cursor: 'pointer' }}>{amt}</button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Arama */}
-      <input 
-        placeholder="Search talent or city..." 
-        value={searchQuery} 
-        onChange={(e) => setSearchQuery(e.target.value)} 
-        style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#000', color: '#fff', border: '1px solid #2563eb', boxSizing: 'border-box' }} 
-      />
+      {/* --- PROFİL EDİT (Fixed) --- */}
+      <details style={{ background: '#111', padding: '10px', borderRadius: '10px', marginBottom: '25px' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>{city ? `📍 ${city} | Edit Profile` : "👤 Setup Your Profile"}</summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+          <input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px' }} />
+          <textarea placeholder="Bio / Talents" value={talents} onChange={(e) => setTalents(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px', height: '60px' }} />
+          <button onClick={handleUpdate} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '8px' }}>SAVE CHANGES</button>
+        </div>
+      </details>
 
-      {/* Sonuçlar */}
+      {/* --- ARAMA VE LİSTE --- */}
+      <input placeholder="Find people to send Houra..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#000', color: '#fff', border: '1px solid #2563eb', boxSizing: 'border-box' }} />
+
       <div style={{ marginTop: '20px' }}>
         {searchResults.map((user) => (
           <div key={user.fid} style={{ padding: '15px', background: '#111', borderRadius: '12px', marginBottom: '10px', border: '1px solid #222' }}>
             <p style={{ margin: 0, fontWeight: 'bold' }}>@{user.username} 📍 {user.city || "Global"}</p>
-            <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '5px 0 10px 0' }}>{user.bio}</p>
+            <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '5px 0 12px 0' }}>{user.bio}</p>
             
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} 
-                style={{ flex: 1, padding: '10px', background: '#333', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
-              >
-                PROFILE
-              </button>
-              <button 
-                onClick={() => handleTransfer(user.wallet_address)} 
-                style={{ flex: 1, padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
-              >
-                SEND 1 HOURA
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ flex: 1, padding: '10px', background: '#333', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>PROFILE</button>
+              <button onClick={() => handleTransfer(user.wallet_address, sendAmount)} style={{ flex: 2, padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
+                SEND {sendAmount} HOURA
               </button>
             </div>
           </div>
         ))}
       </div>
 
-      {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '10px', textAlign: 'center', fontSize: '0.8rem' }}>
-          {status}
-        </div>
-      )}
+      {status && <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '10px', textAlign: 'center', fontSize: '0.8rem', zIndex: 100 }}>{status}</div>}
     </div>
   );
 }

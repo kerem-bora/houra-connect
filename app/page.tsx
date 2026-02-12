@@ -14,14 +14,14 @@ const TOKEN_ABI = [
 
 export default function Home() {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
-  const [isFarcaster, setIsFarcaster] = useState(false); // Yeni: Farcaster kontrolü
+  const [isFarcaster, setIsFarcaster] = useState(false);
   const [context, setContext] = useState<any>(null);
   const [location, setLocation] = useState("");
   const [offer, setOffer] = useState("");
   const [status, setStatus] = useState("");
   const [isAboutOpen, setIsAboutOpen] = useState(false); 
   
-  // States... (Diğer state'ler aynı)
+  // States
   const [sendAmount, setSendAmount] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -73,7 +73,6 @@ export default function Home() {
         sdk.actions.ready();
       } catch (e) { 
         console.log("Not in Farcaster context");
-        // Web'den girenler için ihtiyaçları yine de çekelim ki liste dolsun
         const res = await fetch('/api/needs').catch(() => null);
         if (res) {
           const data = await res.json();
@@ -86,7 +85,76 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // Modal Render Yardımcısı (Kod tekrarını önlemek için)
+  // Search Logic
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.length > 1) {
+        const res = await fetch(`/api/search?q=${searchQuery}`);
+        const data = await res.json();
+        setSearchResults(data.users || []);
+      } else setSearchResults([]);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (offerQuery.length > 1) {
+        const res = await fetch(`/api/search?q=${offerQuery}`);
+        const data = await res.json();
+        setOfferResults(data.users || []);
+      } else setOfferResults([]);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [offerQuery]);
+
+  const handleTransfer = useCallback(async () => {
+    if (!selectedRecipient?.wallet_address) return setStatus("Select recipient");
+    sendCalls({
+      calls: [{
+        to: HOURA_TOKEN_ADDRESS as `0x${string}`,
+        data: encodeFunctionData({
+          abi: TOKEN_ABI,
+          functionName: 'transfer',
+          args: [selectedRecipient.wallet_address as `0x${string}`, parseUnits(sendAmount, 18)],
+        }),
+        value: 0n,
+      }],
+    }, {
+      onSuccess: () => {
+        setStatus("Success! ✅");
+        setSelectedRecipient(null);
+        setTimeout(() => { setStatus(""); refetchBalance(); }, 3000);
+      }
+    });
+  }, [sendCalls, refetchBalance, selectedRecipient, sendAmount]);
+
+  const handleAddNeed = async () => {
+    if (!needText) return setStatus("Write your need.");
+    try {
+      const res = await fetch("/api/needs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fid: context.user.fid,
+          username: context.user.username,
+          location: needLocation,
+          text: needText,
+          wallet_address: currentAddress,
+          price: needPrice
+        }),
+      });
+      if (res.ok) {
+        setStatus("Need posted! ✅");
+        setNeedText(""); setNeedLocation("");
+        const nRes = await fetch('/api/needs');
+        const nData = await nRes.json();
+        setNeeds(nData.needs || []);
+        setTimeout(() => setStatus(""), 2000);
+      }
+    } catch (e) { setStatus("Error"); }
+  };
+
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
@@ -101,8 +169,11 @@ export default function Home() {
       
       {!isFarcaster && (
         <div style={{ background: 'rgba(37, 99, 235, 0.1)', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', marginBottom: '15px' }}>
-          <p style={{ margin: 0, fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' }}>
-            🚀 Open Houra in Farcaster (Warpcast) to start trading time!
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#fff' }}>
+            The Houra app currently only works in the 
+            <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}>
+              Base app
+            </a>
           </p>
         </div>
       )}
@@ -124,7 +195,6 @@ export default function Home() {
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
-  // --- LANDING PAGE (Dış Dünya Modu) ---
   if (!isFarcaster) {
     return (
       <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -135,45 +205,117 @@ export default function Home() {
     );
   }
 
-  // --- APP PAGE (Farcaster İçi Modu) ---
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       
-      {/* HEADER */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
         </div>
-        <button 
-          onClick={() => setIsAboutOpen(true)}
-          style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontStyle: 'italic', fontFamily: 'serif', fontSize: '1.1rem' }}
-        >
-          i
-        </button>
+        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontStyle: 'italic', fontFamily: 'serif', fontSize: '1.1rem' }}>i</button>
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
 
-      {/* ABOUT MODAL (Only for Farcaster users) */}
       {isAboutOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <AboutContent />
         </div>
       )}
       
-      {/* ... REST OF THE APP (Send, Search, Needs - Aynen devam ediyor) ... */}
       {/* 1. SEND PANEL */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
-         {/* ... (Send Panel İçeriği) ... */}
-         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
-         {/* (Kısaltmak için burayı geçiyorum, mevcut kodun aynısı gelecek) */}
+        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
+        {!selectedRecipient ? (
+          <div style={{ position: 'relative' }}>
+            <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none', boxSizing: 'border-box' }} />
+            {searchResults.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#111', borderRadius: '12px', marginTop: '5px', zIndex: 100, border: '1px solid #333', maxHeight: '150px', overflowY: 'auto' }}>
+                {searchResults.map(user => (
+                  <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>@{user.username}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
+            <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
+            <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', textDecoration: 'underline' }}>Change</button>
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
+          <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ width: '50%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none' }} />
+          <span style={{ fontSize: '0.8rem' }}>Bal: {formattedBalance}</span>
+        </div>
+        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
       </div>
 
-      {/* ... (Search for Offers, Add Need, Profile Settings, Latest Needs - Mevcut kodların aynısı) ... */}
-      {/* Not: En alttaki Latest Needs kısmına kadar her şey aynı kalacak */}
-      
-      <div style={{ paddingBottom: '100px' }}>
-        {/* Latest Needs listesi burada listelenmeye devam eder */}
+      {/* 2. SEARCH FOR OFFERS */}
+      <div style={{ marginBottom: '20px' }}>
+        <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: '#fff' }}>Search for Offers</h3>
+        <input placeholder="Search skill, location or user..." value={offerQuery} onChange={(e) => setOfferQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff', boxSizing: 'border-box' }} />
+        {offerResults.length > 0 && (
+          <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {offerResults.map(user => (
+              <div key={user.fid} style={{ padding: '12px', background: '#111', borderRadius: '12px', border: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.bio || "No offer description"}</p>
+                </div>
+                <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 3. ADD YOUR NEED */}
+      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+          <input placeholder="Location" value={needLocation} onChange={(e) => setNeedLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+          <textarea placeholder="What do you need?" value={needText} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+             <label style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Reward:</label>
+             <input type="number" value={needPrice} onChange={(e) => setNeedPrice(e.target.value)} style={{ width: '80px', padding: '8px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px' }} />
+             <span style={{ fontSize: '0.8rem' }}>Houra</span>
+          </div>
+          <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>POST NEED</button>
+        </div>
+      </details>
+
+      {/* 4. PROFILE SETTINGS */}
+      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+          <input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+          <textarea placeholder="What do you offer?" value={offer} onChange={(e) => setOffer(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
+          <button onClick={async () => {
+            await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city: location, talents: offer, address: currentAddress }) });
+            setStatus("Profile Saved! ✅");
+            setTimeout(() => setStatus(""), 2000);
+          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>SAVE PROFILE</button>
+        </div>
+      </details>
+
+      {/* 5. LATEST NEEDS */}
+      <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
+        {needs.map((need: any, idx: number) => (
+          <div key={idx} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
+              <span style={{ color: '#2563eb', fontWeight: 'bold' }}>⏳ {need.price || "1"} Houra</span>
+            </div>
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {status && (

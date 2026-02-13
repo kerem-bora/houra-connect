@@ -165,14 +165,17 @@ export default function Home() {
     }
   };
 
-  const handleSaveProfile = async () => {
+const handleSaveProfile = async () => {
     if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
     
     try {
       setStatus("Saving...");
       const res = await fetch("/api/profile", { 
         method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
+        headers: { 
+          "Content-Type": "application/json",
+          "x-farcaster-fid": context.user.fid.toString(), 
+        }, 
         body: JSON.stringify({ 
           fid: context.user.fid, 
           username: context.user.username, 
@@ -194,7 +197,6 @@ export default function Home() {
       }
     } catch (e) { setStatus("Error saving profile"); }
   };
-
   const handleDeleteNeed = async (id: string) => {
     if (!id || !context?.user?.fid || !currentAddress) return;
     

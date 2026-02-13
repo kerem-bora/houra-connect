@@ -32,8 +32,6 @@ export async function GET(req: Request) {
 
     if (error && error.code !== 'PGRST116') throw error;
     
-    // Page.tsx 'talents' beklediği için veritabanındaki 'bio' sütununu 
-    // frontend'e 'talents' adıyla servis ediyoruz.
     const profileData = data ? {
       ...data,
       talents: data.bio 
@@ -48,23 +46,37 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const validation = ProfileSchema.safeParse(body);
     
+    // 1. Zod Validasyonu
+    const validation = ProfileSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
-    const { fid, username, pfp, city, talents, address } = validation.data;
+    const { fid, username, city, talents } = validation.data;
 
-    // Sadece 'city' ve 'bio' sütunlarına yazıyoruz.
-    // 'avatar_url' veya 'wallet_address' gibi sütunların yoksa hata almamak için onları çıkardım.
+    // 2. KİMLİK KONTROLÜ (GİZLİ HEADER DOĞRULAMA)
+    // Frontend'den 'x-farcaster-fid' adıyla gönderdiğimiz header'ı okuyoruz
+    const headerFid = req.headers.get("x-farcaster-fid");
+
+    if (!headerFid) {
+      return NextResponse.json({ error: "No identity header found" }, { status: 401 });
+    }
+
+    // Header'daki FID ile Body'deki FID uyuşuyor mu? 
+    // (Biri başkasının FID'si üzerine yazmaya çalışırsa burada patlar)
+    if (Number(headerFid) !== Number(fid)) {
+      return NextResponse.json({ error: "Identity mismatch! Authorization failed." }, { status: 403 });
+    }
+
+    // 3. Veritabanı İşlemi
     const { error: dbError } = await supabase
       .from('profiles')
       .upsert({
         fid: fid,
         username: username,
         city: city || "Global",
-        bio: talents || "", // Frontend'den gelen veriyi 'bio' sütununa yaz
+        bio: talents || "",
       }, { onConflict: 'fid' });
 
     if (dbError) throw dbError;

@@ -157,35 +157,29 @@ export default function Home() {
     } catch (e) { setStatus("Error"); }
   };
 
-const handleDeleteNeed = async (id: number) => {
-    console.log("Deleting id:", id);
-  
-  if (!id) {
-    setStatus("Error: Missing ID");
-    return;
-  }
+  const handleDeleteNeed = async (id: number) => {
+    // Mobil Frame'lerde confirm() bazen takılabiliyor, 
+    // sorun buysa confirm'i kaldırıp doğrudan işlem yapacaktır.
+    setStatus("Deleting...");
+    try {
+      const res = await fetch(`/api/needs?id=${id}&fid=${context?.user?.fid}`, {
+        method: "DELETE",
+      });
 
-  if (!confirm("Are you sure?")) return;
+      const data = await res.json();
 
-  try {
-    const res = await fetch(`/api/needs?id=${id}&fid=${context?.user?.fid}`, {
-      method: "DELETE",
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      setStatus("Deleted! 🗑️");
-      setNeeds((prev) => prev.filter((n) => n.id !== id));
-      setTimeout(() => setStatus(""), 2000);
-    } else {
-      setStatus(`Error: ${data.error}`);
+      if (res.ok) {
+        setStatus("Deleted! 🗑️");
+        setNeeds((prev) => prev.filter((n) => n.id !== id));
+        setTimeout(() => setStatus(""), 2000);
+      } else {
+        setStatus(`Error: ${data.error}`);
+        setTimeout(() => setStatus(""), 3000);
+      }
+    } catch (e) {
+      setStatus("Network error");
     }
-  } catch (e) {
-    setStatus("Network error");
-    console.error(e);
-  }
-};
+  };
 
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left', boxSizing: 'border-box' }}>
@@ -344,8 +338,22 @@ const handleDeleteNeed = async (id: number) => {
               <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} H</span>
-                {context?.user?.fid === need.fid && (
-                  <button onClick={() => handleDeleteNeed(need.id)} style={{ background: '#ff4444', border: 'none', color: '#fff', fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}>Delete</button>
+                {Number(context?.user?.fid) === Number(need.fid) && (
+                  <button 
+                    onClick={() => handleDeleteNeed(need.id)} 
+                    style={{ 
+                      background: '#ff4444', 
+                      border: 'none', 
+                      color: '#fff', 
+                      fontSize: '0.65rem', 
+                      padding: '4px 8px', 
+                      borderRadius: '6px', 
+                      cursor: 'pointer',
+                      zIndex: 10
+                    }}
+                  >
+                    Delete
+                  </button>
                 )}
               </div>
             </div>
@@ -359,7 +367,7 @@ const handleDeleteNeed = async (id: number) => {
       </div>
 
       {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 3000 }}>
           {status}
         </div>
       )}

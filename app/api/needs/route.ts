@@ -32,21 +32,17 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    // 1. Zod ile doğrulamayı çalıştır (Hata buradaydı, 'validation' tanımlanmamıştı)
+    const validation = NeedSchema.safeParse(body);
     
-    // İmzanın ne olduğunu hata olarak fırlatıp ekranda görelim
-    const sigPreview = body.signature ? String(body.signature).substring(0, 10) : "YOK";
-    const sigLength = body.signature ? String(body.signature).length : 0;
-    
-    // EĞER İMZA 132 DEĞİLSE BURADA DUR VE BİZE DETAY VER
-    if (sigLength !== 132) {
-      return NextResponse.json({ 
-        error: `IMZA HATALI! Boyut: ${sigLength}, İlk 10 Karakter: ${sigPreview}`,
-        received_data: body.signature // Gelen veriyi aynen geri gönder
-      }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json({ error: "Invalid data format", details: validation.error.format() }, { status: 400 });
     }
+
     const { fid, username, location, text, price, wallet_address, signature, message } = validation.data;
 
-    // --- DEBUG: DOĞRULAMA ÖNCESİ ---
+    // 2. İmza Doğrulaması
     try {
       const isValid = await verifyMessage({
         address: wallet_address as `0x${string}`,
@@ -55,32 +51,40 @@ export async function POST(req: Request) {
       });
 
       if (!isValid) {
-        return NextResponse.json({ error: "Signature verification failed (Logic)!" }, { status: 401 });
+        return NextResponse.json({ error: "Signature verification failed!" }, { status: 401 });
       }
     } catch (vError: any) {
-      console.error("Viem verifyMessage Error:", vError);
-      return NextResponse.json({ 
-        error: "Viem Error: " + vError.message,
-        receivedSigLength: signature.length
-      }, { status: 400 });
+      return NextResponse.json({ error: "Crypto Verify Error: " + vError.message }, { status: 400 });
     }
 
-    // Rate Limit & Insert işlemleri...
-    const { count } = await supabase.from('needs').select('*', { count: 'exact', head: true })
-      .eq('fid', fid).gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    // 3. Rate Limit (Günde 3 paylaşım)
+    const { count } = await supabase.from('needs')
+      .select('*', { count: 'exact', head: true })
+      .eq('fid', fid)
+      .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-    if (count !== null && count >= 3) return NextResponse.json({ error: "Daily limit reached" }, { status: 429 });
+    if (count !== null && count >= 3) {
+      return NextResponse.json({ error: "Daily limit reached (3 needs max)" }, { status: 429 });
+    }
 
+    // 4. Veritabanına Kayıt
     const { error: dbError } = await supabase.from('needs').insert([{
-      fid, username, location, text, price: price.toString(), wallet_address, id: crypto.randomUUID()
+      fid, 
+      username, 
+      location, 
+      text, 
+      price: price.toString(), 
+      wallet_address, 
+      id: crypto.randomUUID()
     }]);
 
     if (dbError) throw dbError;
+
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
     console.error("Full Post Error:", error);
-    return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -90,9 +94,6 @@ export async function DELETE(req: Request) {
     const idValue = searchParams.get('id'); 
     const fidValue = searchParams.get('fid');
     const body = await req.json();
-
-    // --- DEBUG: DELETE KONTROLÜ ---
-    console.log("DELETE Request:", { idValue, fidValue, body });
 
     if (!idValue || !fidValue || !body.signature || !body.address) {
       return NextResponse.json({ error: "Missing parameters for delete" }, { status: 400 });
@@ -107,13 +108,14 @@ export async function DELETE(req: Request) {
     if (!isValid) return NextResponse.json({ error: "Delete Signature Invalid" }, { status: 401 });
 
     const { error } = await supabase.from('needs').delete()
-      .eq('id', idValue).eq('fid', Number(fidValue)).eq('wallet_address', body.address);
+      .eq('id', idValue)
+      .eq('fid', Number(fidValue))
+      .eq('wallet_address', body.address);
 
     if (error) throw error;
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    console.error("Full Delete Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

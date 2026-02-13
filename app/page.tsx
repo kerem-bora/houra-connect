@@ -47,18 +47,20 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  const fetchAllData = useCallback(async (fid: number) => {
+  const fetchAllData = useCallback(async (fid?: number) => {
     try {
-      const profRes = await fetch(`/api/profile?fid=${fid}`);
-      const profData = await profRes.json();
-      if (profData.profile) {
-        setLocation(profData.profile.city || "");
-        setOffer(profData.profile.talents || profData.profile.bio || "");
+      if (fid) {
+        const profRes = await fetch(`/api/profile?fid=${fid}`);
+        const profData = await profRes.json();
+        if (profData.profile) {
+          setLocation(profData.profile.city || "");
+          setOffer(profData.profile.bio || "");
+        }
       }
       const needsRes = await fetch('/api/needs');
       const needsData = await needsRes.json();
       setNeeds(needsData.needs || []);
-    } catch (e) { console.error("Fetch Error:", e); }
+    } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => {
@@ -69,14 +71,14 @@ export default function Home() {
         if (ctx?.user?.fid) {
           setIsFarcaster(true);
           await fetchAllData(ctx.user.fid);
+        } else {
+          // Farcaster dışı ama SDK var (nadir durum)
+          await fetchAllData();
         }
         sdk.actions.ready();
       } catch (e) { 
-        const res = await fetch('/api/needs').catch(() => null);
-        if (res) {
-          const data = await res.json();
-          setNeeds(data.needs || []);
-        }
+        // Tamamen harici tarayıcı
+        await fetchAllData();
       } finally {
         setIsSDKLoaded(true);
       }
@@ -84,7 +86,23 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // Search Logics
+  // Silme Fonksiyonu (ID düzeltmesi yapıldı)
+  const handleDeleteNeed = async (id: string) => {
+    if (!id || !context?.user?.fid) return;
+    setStatus("Siliniyor...");
+    try {
+      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setNeeds(prev => prev.filter(n => n.id !== id));
+        setStatus("Silindi! ✅");
+        setTimeout(() => setStatus(""), 2000);
+      }
+    } catch (e) { setStatus("Error"); }
+  };
+
+  // Search Logic (Users)
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -96,6 +114,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Search Logic (Offers)
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (offerQuery.length > 1) {
@@ -146,77 +165,86 @@ export default function Home() {
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText(""); setNeedLocation("");
-        // Listeyi hemen güncelle
         const nRes = await fetch('/api/needs');
         const nData = await nRes.json();
         setNeeds(nData.needs || []);
         setTimeout(() => setStatus(""), 2000);
-      } else {
-        const data = await res.json();
-        setStatus(data.error || "Error");
       }
-    } catch (e) { setStatus("Error posting need"); }
+    } catch (e) { setStatus("Error"); }
   };
 
-const handleDeleteNeed = async (id: string) => {
-  if (!id || !context?.user?.fid) return;
-  
-  setStatus("Siliniyor...");
-  try {
-    // URL'deki parametreyi 'id' yaptık
-    const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
-      method: "DELETE",
-    });
-    
-    if (res.ok) {
-      // Listeyi güncellerken 'id' kontrolü yapıyoruz
-      setNeeds(prev => prev.filter(n => n.id !== id));
-      setStatus("Silindi! ✅");
-      setTimeout(() => setStatus(""), 2000);
-    } else {
-      setStatus("Silme başarısız.");
-    }
-  } catch (e) {
-    setStatus("Hata oluştu.");
-  }
-};
-
   const AboutContent = () => (
-    <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left', boxSizing: 'border-box' }}>
+    <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
-      <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>Houra is a peer-to-peer <strong>Time Economy</strong> platform.</p>
+      <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
+        Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based tokens.
+      </p>
       <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <p>📍 <strong>Profile:</strong> Set your location and offer.</p>
-        <p>⏳ <strong>Earn:</strong> Help others and collect tokens.</p>
-        <p>🛠️ <strong>Post:</strong> Share what you need.</p>
+        <p>📍 <strong>Profile:</strong> Set your location and what you offer to the community.</p>
+        <p>⏳ <strong>Earn:</strong> Help others with their needs and collect Houra tokens.</p>
+        <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
       </div>
-      <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Got it!</button>
+      
+      {!isFarcaster && (
+        <div style={{ background: 'rgba(37, 99, 235, 0.1)', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', marginBottom: '15px' }}>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#fff' }}>
+            The Houra app currently only works in the 
+            <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}>
+              Base app
+            </a>
+          </p>
+        </div>
+      )}
+
+      <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
+        Learn more about 
+        <a href="https://en.wikipedia.org/wiki/Time-based_currency" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
+          Time-based Currencies
+        </a>
+      </p>
+      
+      {isFarcaster && (
+        <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>
+          Got it!
+        </button>
+      )}
     </div>
   );
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
+  // --- EXTERNAL BROWSER VIEW ---
+  if (!isFarcaster) {
+    return (
+      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
+        <AboutContent />
+        <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy © 2026</p>
+      </div>
+    );
+  }
+
+  // --- MAIN APP VIEW ---
   return (
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', boxSizing: 'border-box' }}>
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
         </div>
-        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>i</button>
+        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontStyle: 'italic', fontFamily: 'serif', fontSize: '1.1rem' }}>i</button>
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
 
       {isAboutOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <AboutContent />
         </div>
       )}
       
       {/* 1. SEND PANEL */}
-      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px', boxSizing: 'border-box' }}>
+      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
         {!selectedRecipient ? (
           <div style={{ position: 'relative' }}>
@@ -246,17 +274,17 @@ const handleDeleteNeed = async (id: string) => {
 
       {/* 2. SEARCH FOR OFFERS */}
       <div style={{ marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '1rem', marginBottom: '10px' }}>Search for Offers</h3>
-        <input placeholder="Search offer..." value={offerQuery} onChange={(e) => setOfferQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff', boxSizing: 'border-box' }} />
+        <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: '#fff' }}>Search for Offers</h3>
+        <input placeholder="Search offer, location, or user..." value={offerQuery} onChange={(e) => setOfferQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff', boxSizing: 'border-box' }} />
         {offerResults.length > 0 && (
           <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {offerResults.map(user => (
               <div key={user.fid} style={{ padding: '12px', background: '#111', borderRadius: '12px', border: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ flex: 1, overflow: 'hidden' }}>
+                <div>
                   <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.talents || user.bio || "No offer"}</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.bio || "No offer description"}</p>
                 </div>
-                <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW</button>
+                <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
               </div>
             ))}
           </div>
@@ -269,10 +297,11 @@ const handleDeleteNeed = async (id: string) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
           <div style={{ display: 'flex', gap: '10px' }}>
             <input placeholder="Location" value={needLocation} onChange={(e) => setNeedLocation(e.target.value)} style={{ flex: 1, padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-            <button onClick={() => setNeedLocation("Online")} style={{ padding: '0 15px', background: '#222', color: '#fff', border: '1px solid #333', borderRadius: '10px' }}>Online</button>
+            <button onClick={() => setNeedLocation("Online")} style={{ padding: '0 15px', background: '#222', color: '#fff', border: '1px solid #333', borderRadius: '10px', fontSize: '0.8rem' }}>Online</button>
           </div>
           <textarea placeholder="What do you need?" value={needText} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+             <label style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Reward:</label>
              <input type="number" value={needPrice} onChange={(e) => setNeedPrice(e.target.value)} style={{ width: '80px', padding: '8px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px' }} />
              <span style={{ fontSize: '0.8rem' }}>Houra</span>
           </div>
@@ -290,48 +319,41 @@ const handleDeleteNeed = async (id: string) => {
             await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city: location, talents: offer, address: currentAddress }) });
             setStatus("Profile Saved! ✅");
             setTimeout(() => setStatus(""), 2000);
-          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px' }}>SAVE PROFILE</button>
+          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>SAVE PROFILE</button>
         </div>
       </details>
 
       {/* 5. LATEST NEEDS */}
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
-        {needs.length > 0 ? (
-          needs.map((need: any) => {
-            // API'den gelen uuid'yi kullanıyoruz
-            const needId = need.uuid || need.id;
-            return (
-              <div key={needId} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} H</span>
-                    {Number(context?.user?.fid) === Number(need.fid) && (
-                      <button 
-                        onClick={() => handleDeleteNeed(need.id)}
-                        style={{ background: '#ff4444', border: 'none', color: '#fff', fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                   <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-                   <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <p style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>No needs found.</p>
-        )}
+        {needs.map((need: any, idx: number) => (
+          <div key={idx} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
+              {/* SİLME BUTONU: Sadece kendi postumuzu silebiliriz */}
+              {context?.user?.fid && Number(need.fid) === Number(context.user.fid) && (
+                <button 
+                  onClick={() => handleDeleteNeed(need.id)} 
+                  style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                 <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+                 <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
+               </div>
+               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 3000 }}>
+        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 1000 }}>
           {status}
         </div>
       )}

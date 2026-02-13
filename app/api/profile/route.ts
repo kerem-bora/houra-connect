@@ -12,7 +12,7 @@ const ProfileSchema = z.object({
   username: z.string().min(1),
   pfp: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
-  talents: z.string().optional().nullable(), // Frontend'den gelen alan adı
+  talents: z.string().optional().nullable(), // Frontend'den "What do you offer" içeriği bu isimle gelir
   address: z.string().min(1),
   signature: z.string().min(1), 
   message: z.string().min(1),  
@@ -26,14 +26,21 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('*') // Tüm sütunları (bio dahil) çekiyoruz
+      .select('*')
       .eq('fid', Number(fid))
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
     
-    // Veritabanındaki 'bio' sütunu artık frontend'e 'profile' objesi içinde gidiyor
-    return NextResponse.json({ profile: data || null });
+    // --- KRİTİK DÜZELTME ---
+    // Eğer data varsa, page.tsx'in beklediği 'talents' alanını 
+    // veritabanındaki 'bio' sütunundan eşliyoruz.
+    const responseData = data ? {
+      ...data,
+      talents: data.bio // Veritabanındaki "Dinlerim" yazısını talents anahtarına koyuyoruz
+    } : null;
+
+    return NextResponse.json({ profile: responseData });
   } catch (error: any) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
@@ -50,10 +57,7 @@ export async function POST(req: Request) {
 
     const { fid, username, pfp, city, talents, address } = validation.data;
 
-    // Bypass aktif
-    const isValid = true; 
-
-    // Veritabanı İşlemi: talents değerini bio sütununa yazıyoruz
+    // Veritabanı İşlemi
     const { error: dbError } = await supabase
       .from('profiles')
       .upsert({
@@ -61,7 +65,7 @@ export async function POST(req: Request) {
         username: username,
         avatar_url: pfp || null,
         city: city || "Global",
-        bio: talents || "", // DB'deki sütun adın 'bio' olduğu için burayı sabitledik
+        bio: talents || "", // Frontend'den gelen 'talents' değerini 'bio' sütununa yazıyoruz
         wallet_address: address || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'fid' });
@@ -72,7 +76,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Profile POST Error:", error);
-    // Hata detayını görmek için status 500 ve mesajı dönelim
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

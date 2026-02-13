@@ -89,28 +89,25 @@ export async function DELETE(req: Request) {
     const fid = searchParams.get('fid');
 
     if (!id || !fid) {
-      return NextResponse.json({ error: "ID and FID are required" }, { status: 400 });
+      return NextResponse.json({ error: "Missing ID or FID" }, { status: 400 });
     }
 
-    // SECURITY: Delete only if both ID and FID match
     const { data, error } = await supabase
       .from('needs')
       .delete()
-      .eq('id', id)
-      .eq('fid', parseInt(fid))
+      .eq('id', parseInt(id)) // Ensure ID is parsed to Integer
+      .eq('fid', parseInt(fid)) // Ensure FID is parsed to Integer
       .select();
 
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      return NextResponse.json({ 
-        error: "Need not found or unauthorized action" 
-      }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized or not found" }, { status: 403 });
     }
 
-    return NextResponse.json({ success: true, message: "Need deleted successfully" });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("Delete Need Error:", error);
-    return NextResponse.json({ error: "Failed to delete need" }, { status: 500 });
+    console.error("Delete Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

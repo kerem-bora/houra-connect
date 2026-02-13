@@ -339,8 +339,23 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} Houra</span>
                 {context?.user?.fid === need.fid && (
-                  <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.75rem', cursor: 'pointer' }}>Delete</button>
-                )}
+  <button 
+    onClick={(e) => {
+      e.preventDefault(); // Prevent any accidental parent triggers
+      handleDeleteNeed(need.id);
+    }} 
+    style={{ 
+      background: 'none', 
+      border: 'none', 
+      color: '#ff4444', 
+      fontSize: '0.75rem', 
+      cursor: 'pointer',
+      padding: '5px' 
+    }}
+  >
+    Delete
+  </button>
+)}
               </div>
             </div>
             <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>

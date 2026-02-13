@@ -47,21 +47,23 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- FETCH LOGIC: Düzeltilen Kısım ---
+  // --- FETCH LOGIC: Profil ve Needs Senkronizasyonu ---
   const fetchAllData = useCallback(async (fid?: number) => {
     try {
-      // 1. Needs her zaman çekilmeli
+      // 1. Needs listesini her zaman çek
       const needsRes = await fetch('/api/needs');
       const needsData = await needsRes.json();
-      setNeeds(needsData.needs || []);
+      if (needsData.needs) setNeeds(needsData.needs);
 
-      // 2. Profil sadece FID varsa çekilmeli
+      // 2. Profil Çekme (Eğer FID varsa)
       if (fid) {
         const profRes = await fetch(`/api/profile?fid=${fid}`);
         const profData = await profRes.json();
+        
         if (profData.profile) {
           setLocation(profData.profile.city || "");
-          setOffer(profData.profile.bio || "");
+          // ÖNEMLİ: API'den gelen field 'talents' ise onu setliyoruz
+          setOffer(profData.profile.talents || profData.profile.bio || "");
         }
       }
     } catch (e) { 
@@ -74,14 +76,16 @@ export default function Home() {
       try {
         const ctx = await sdk.context;
         setContext(ctx);
-        if (ctx?.user?.fid) {
+        
+        // Context geldiyse FID ile, gelmediyse genel çek
+        const userFid = ctx?.user?.fid;
+        if (userFid) {
           setIsFarcaster(true);
-          // FID ile yükle
-          await fetchAllData(ctx.user.fid);
+          await fetchAllData(userFid);
         } else {
-          // FID olmasa da verileri yükle (Latest Needs için kritik)
           await fetchAllData();
         }
+        
         sdk.actions.ready();
       } catch (e) { 
         await fetchAllData();
@@ -113,32 +117,17 @@ export default function Home() {
         }),
       });
 
-      const data = await res.json();
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText(""); 
         setNeedLocation("");
-        await fetchAllData(); // Listeyi yenile
+        await fetchAllData(context.user.fid); // Listeyi ve profili tazele
         setTimeout(() => setStatus(""), 2000);
       } else {
+        const data = await res.json();
         setStatus(`Error: ${data.error || "Failed"}`);
       }
     } catch (e) { setStatus("Error"); }
-  };
-
-  const handleDeleteNeed = async (id: string) => {
-    if (!id || !context?.user?.fid) return;
-    setStatus("Deleting...");
-    try {
-      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setNeeds(prev => prev.filter(n => n.id !== id));
-        setStatus("Deleted! ✅");
-        setTimeout(() => setStatus(""), 2000);
-      }
-    } catch (e) { setStatus("Delete error"); }
   };
 
   const handleSaveProfile = async () => {
@@ -164,7 +153,21 @@ export default function Home() {
     } catch (e) { setStatus("Save error"); }
   };
 
-  // --- UI RENDER ---
+  const handleDeleteNeed = async (id: string) => {
+    if (!id || !context?.user?.fid) return;
+    setStatus("Deleting...");
+    try {
+      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setNeeds(prev => prev.filter(n => n.id !== id));
+        setStatus("Deleted! ✅");
+        setTimeout(() => setStatus(""), 2000);
+      }
+    } catch (e) { setStatus("Delete error"); }
+  };
+
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
   return (
@@ -180,7 +183,7 @@ export default function Home() {
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
 
-      {/* 1. SEND PANEL (Aynı kaldı) */}
+      {/* 1. SEND PANEL */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
         {!selectedRecipient ? (
@@ -197,10 +200,10 @@ export default function Home() {
           <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ width: '50%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none' }} />
           <span style={{ fontSize: '0.8rem' }}>Bal: {formattedBalance}</span>
         </div>
-        <button onClick={() => {/* handleTransfer */}} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
+        <button style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
       </div>
 
-      {/* 2. ADD NEED (Karakter Limitli) */}
+      {/* 2. ADD NEED */}
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
@@ -233,7 +236,7 @@ export default function Home() {
         </div>
       </details>
 
-      {/* 4. LATEST NEEDS LIST (Kritik Render) */}
+      {/* 4. LATEST NEEDS */}
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
         {needs.length === 0 ? (

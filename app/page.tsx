@@ -157,35 +157,17 @@ export default function Home() {
     } catch (e) { setStatus("Error"); }
   };
 
-const handleDeleteNeed = async (id: any) => {
-  // DEDEKTİF LOGLARI - Konsolda ve status bar'da göreceğiz
-  const fid = context?.user?.fid;
-  
-  if (!fid) {
-    setStatus(`Error: FID is missing (${typeof fid})`);
-    return;
-  }
-  if (!id) {
-    setStatus(`Error: ID is missing (${typeof id})`);
-    return;
-  }
-
-  const cleanId = Number(id);
-  const cleanFid = Number(fid);
-
-  if (isNaN(cleanId)) {
-    setStatus(`Error: ID is not a number (${id})`);
-    return;
-  }
-  if (isNaN(cleanFid)) {
-    setStatus(`Error: FID is not a number (${fid})`);
+const handleDeleteNeed = async (uuid: string) => {
+  if (!uuid || !context?.user?.fid) {
+    setStatus("Error: Missing UUID or FID");
     return;
   }
 
   setStatus("Deleting...");
   
   try {
-    const res = await fetch(`/api/needs?id=${cleanId}&fid=${cleanFid}`, {
+    // API'ye id yerine uuid parametresi gönderiyoruz
+    const res = await fetch(`/api/needs?uuid=${uuid}&fid=${context.user.fid}`, {
       method: "DELETE",
     });
 
@@ -193,7 +175,8 @@ const handleDeleteNeed = async (id: any) => {
 
     if (res.ok) {
       setStatus("Deleted! 🗑️");
-      setNeeds((prev) => prev.filter((n) => n.id !== cleanId));
+      // Listeyi güncellerken de uuid kullanıyoruz
+      setNeeds((prev) => prev.filter((n) => n.uuid !== uuid));
       setTimeout(() => setStatus(""), 2000);
     } else {
       setStatus(`API Error: ${data.error}`);

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { crypto } from "next/dist/compiled/@edge-runtime/primitives/crypto"; // Edge runtime dostu uuid için
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// --- INPUT VALIDATION SCHEMA ---
 const NeedSchema = z.object({
   fid: z.number(),
   username: z.string().min(1).max(50),
@@ -17,28 +17,22 @@ const NeedSchema = z.object({
   wallet_address: z.string().startsWith("0x").optional(),
 });
 
-// --- FETCH ALL NEEDS ---
-// --- FETCH ALL NEEDS (api/needs/route.ts içinde) ---
+// --- GET: Fetch All ---
 export async function GET() {
   try {
     const { data, error } = await supabase
       .from('needs')
-      // Hem uuid hem id çekelim ki frontend neyi isterse onu kullansın
       .select('*') 
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    
-    // Log atalım ki terminalde ne geldiğini gör
-    console.log("Veritabanından gelen data:", data?.[0]); 
-    
     return NextResponse.json({ needs: data });
   } catch (error: any) {
     return NextResponse.json({ error: "Database fetch failed" }, { status: 500 });
   }
 }
 
-// --- CREATE NEW NEED ---
+// --- POST: Create with UUID ---
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -53,37 +47,46 @@ export async function POST(req: Request) {
 
     const { fid, username, location, text, price, wallet_address } = validation.data;
 
+    // Rate Limit Kontrolü
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count, error: countError } = await supabase
+    const { count } = await supabase
       .from('needs')
       .select('*', { count: 'exact', head: true })
       .eq('fid', fid)
       .gt('created_at', twentyFourHoursAgo);
 
-    if (countError) {
-      console.error("Rate limit error:", countError);
-    } else if (count !== null && count >= 3) {
+    if (count !== null && count >= 3) {
       return NextResponse.json({ error: "Daily limit reached (3 posts max)" }, { status: 429 });
     }
 
+    // KRİTİK DÜZELTME: Kayıt atarken uuid'yi biz oluşturuyoruz
+    const newNeed = {
+      fid,
+      username,
+      location,
+      text,
+      price,
+      wallet_address,
+      uuid: java.util.UUID.randomUUID ? undefined : crypto.randomUUID() // Standart UUID üretimi
+    };
+
     const { error: dbError } = await supabase
       .from('needs')
-      .insert([{ fid, username, location, text, price, wallet_address }]);
+      .insert([newNeed]);
 
     if (dbError) throw dbError;
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Post Error:", error);
-    return NextResponse.json({ error: "Server error during post" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Server error" }, { status: 500 });
   }
 }
 
-// --- DELETE NEED (Secure by UUID and FID) ---
+// --- DELETE: Secure Delete ---
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    // 'id' yerine 'uuid' alıyoruz
     const uuid = searchParams.get('uuid'); 
     const fid = searchParams.get('fid');
 
@@ -91,28 +94,24 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Missing UUID or FID" }, { status: 400 });
     }
 
-    // FID hala sayı olmalı, ama UUID string kalmalı
-    const targetFid = Number(fid);
-
-    if (isNaN(targetFid)) {
-      return NextResponse.json({ error: "FID must be a number" }, { status: 400 });
-    }
+    // Terminal logu: Hangi UUID ve FID silinmeye çalışıyor gör
+    console.log(`Attempting to delete need: UUID=${uuid}, FID=${fid}`);
 
     const { data, error } = await supabase
       .from('needs')
       .delete()
       .eq('uuid', uuid)
-      .eq('fid', targetFid)
+      .eq('fid', Number(fid))
       .select();
 
     if (error) {
-      console.error("Delete Error:", error);
-      return NextResponse.json({ error: "Database delete failed" }, { status: 500 });
+      console.error("Supabase Error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     if (!data || data.length === 0) {
       return NextResponse.json({ 
-        error: "Unauthorized: Post not found or you don't own it" 
+        error: "Post not found or unauthorized" 
       }, { status: 403 });
     }
 

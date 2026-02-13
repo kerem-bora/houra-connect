@@ -146,6 +146,7 @@ export default function Home() {
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText(""); setNeedLocation("");
+        // Listeyi hemen güncelle
         const nRes = await fetch('/api/needs');
         const nData = await nRes.json();
         setNeeds(nData.needs || []);
@@ -157,23 +158,29 @@ export default function Home() {
     } catch (e) { setStatus("Error posting need"); }
   };
 
-  const handleDeleteNeed = async (identifier: string) => {
-    if (!identifier || !context?.user?.fid) return setStatus("Error: Missing ID");
+  const handleDeleteNeed = async (uuid: string) => {
+    if (!uuid || !context?.user?.fid) {
+      setStatus("Error: Missing Data");
+      return;
+    }
     setStatus("Deleting...");
     try {
-      // ÖNEMLİ: API'ye uuid olarak gönderiyoruz
-      const res = await fetch(`/api/needs?uuid=${identifier}&fid=${context.user.fid}`, {
+      const res = await fetch(`/api/needs?uuid=${uuid}&fid=${context.user.fid}`, {
         method: "DELETE",
       });
       const data = await res.json();
+      
       if (res.ok) {
         setStatus("Deleted! 🗑️");
-        setNeeds(prev => prev.filter(n => (n.uuid !== identifier && n.id?.toString() !== identifier.toString())));
+        // State'den anında kaldır
+        setNeeds(prev => prev.filter(n => n.uuid !== uuid));
         setTimeout(() => setStatus(""), 2000);
       } else {
         setStatus(`API Error: ${data.error}`);
       }
-    } catch (e) { setStatus("Network error"); }
+    } catch (e) { 
+      setStatus("Network error"); 
+    }
   };
 
   const AboutContent = () => (
@@ -292,24 +299,37 @@ export default function Home() {
       {/* 5. LATEST NEEDS */}
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
-        {needs.map((need: any) => (
-          <div key={need.uuid || need.id} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} H</span>
-                {Number(context?.user?.fid) === Number(need.fid) && (
-                  <button onClick={() => handleDeleteNeed(need.uuid || need.id)} style={{ background: '#ff4444', border: 'none', color: '#fff', fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}>Delete</button>
-                )}
+        {needs.length > 0 ? (
+          needs.map((need: any) => {
+            // API'den gelen uuid'yi kullanıyoruz
+            const needId = need.uuid || need.id;
+            return (
+              <div key={needId} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} H</span>
+                    {Number(context?.user?.fid) === Number(need.fid) && (
+                      <button 
+                        onClick={() => handleDeleteNeed(need.uuid)} // Özellikle uuid gönderiyoruz
+                        style={{ background: '#ff4444', border: 'none', color: '#fff', fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+                   <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+                </div>
               </div>
-            </div>
-            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
-            </div>
-          </div>
-        ))}
+            );
+          })
+        ) : (
+          <p style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>No needs found.</p>
+        )}
       </div>
 
       {status && (

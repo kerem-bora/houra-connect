@@ -157,29 +157,40 @@ export default function Home() {
     } catch (e) { setStatus("Error"); }
   };
 
-  const handleDeleteNeed = async (id: number) => {
-    // Mobil Frame'lerde confirm() bazen takılabiliyor, 
-    // sorun buysa confirm'i kaldırıp doğrudan işlem yapacaktır.
-    setStatus("Deleting...");
-    try {
-      const res = await fetch(`/api/needs?id=${id}&fid=${context?.user?.fid}`, {
-        method: "DELETE",
-      });
+const handleDeleteNeed = async (id: any) => {
+  const cleanId = Number(id);
+  const cleanFid = Number(context?.user?.fid);
 
-      const data = await res.json();
+  // Eğer sayılara dönüştürülemiyorsa durdur
+  if (isNaN(cleanId) || isNaN(cleanFid)) {
+    setStatus("Error: Invalid ID or FID format");
+    return;
+  }
 
-      if (res.ok) {
-        setStatus("Deleted! 🗑️");
-        setNeeds((prev) => prev.filter((n) => n.id !== id));
-        setTimeout(() => setStatus(""), 2000);
-      } else {
-        setStatus(`Error: ${data.error}`);
-        setTimeout(() => setStatus(""), 3000);
-      }
-    } catch (e) {
-      setStatus("Network error");
+  setStatus("Deleting...");
+  
+  try {
+    // URL içinde sayıları zorla gönderiyoruz
+    const res = await fetch(`/api/needs?id=${cleanId}&fid=${cleanFid}`, {
+      method: "DELETE",
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setStatus("Deleted! 🗑️");
+      setNeeds((prev) => prev.filter((n) => n.id !== cleanId));
+      setTimeout(() => setStatus(""), 2000);
+    } else {
+      // API'den gelen detaylı hata mesajını göster
+      setStatus(`Error: ${data.error || 'Failed to delete'}`);
+      setTimeout(() => setStatus(""), 3000);
     }
-  };
+  } catch (e) {
+    setStatus("Network error");
+    console.error("Delete Error:", e);
+  }
+};
 
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left', boxSizing: 'border-box' }}>

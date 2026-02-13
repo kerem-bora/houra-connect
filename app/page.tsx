@@ -158,24 +158,26 @@ export default function Home() {
     } catch (e) { setStatus("Error posting need"); }
   };
 
- const handleDeleteNeed = async (uuid: string) => {
-  if (!uuid || !context?.user?.fid) return;
+const handleDeleteNeed = async (id: string) => {
+  if (!id || !context?.user?.fid) return;
   
   setStatus("Siliniyor...");
   try {
-    const res = await fetch(`/api/needs?uuid=${uuid}&fid=${context.user.fid}`, {
+    // URL'deki parametreyi 'id' yaptık
+    const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
       method: "DELETE",
     });
     
     if (res.ok) {
-      setNeeds(prev => prev.filter(n => n.uuid !== uuid));
+      // Listeyi güncellerken 'id' kontrolü yapıyoruz
+      setNeeds(prev => prev.filter(n => n.id !== id));
       setStatus("Silindi! ✅");
+      setTimeout(() => setStatus(""), 2000);
     } else {
-      const data = await res.json();
-      setStatus(`Hata: ${data.error}`);
+      setStatus("Silme başarısız.");
     }
   } catch (e) {
-    setStatus("Bağlantı hatası");
+    setStatus("Hata oluştu.");
   }
 };
 
@@ -307,7 +309,7 @@ export default function Home() {
                     <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} H</span>
                     {Number(context?.user?.fid) === Number(need.fid) && (
                       <button 
-                        onClick={() => handleDeleteNeed(need.uuid)} // Özellikle uuid gönderiyoruz
+                        onClick={() => handleDeleteNeed(need.id)}
                         style={{ background: '#ff4444', border: 'none', color: '#fff', fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
                       >
                         Delete

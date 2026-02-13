@@ -89,10 +89,11 @@ export async function POST(req: Request) {
 }
 
 // --- DELETE: Secure Delete ---
+// --- DELETE: Secure Delete ---
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const idValue = searchParams.get('uuid');
+    const idValue = searchParams.get('id'); // 'uuid' yerine 'id' alalım
     const fidValue = searchParams.get('fid');
 
     if (!idValue || !fidValue) {
@@ -102,7 +103,7 @@ export async function DELETE(req: Request) {
     const { error } = await supabase
       .from('needs')
       .delete()
-      .eq('uuid', idValue)
+      .eq('id', idValue) // BURASI KRİTİK: Veritabanındaki ad 'id'
       .eq('fid', Number(fidValue));
 
     if (error) throw error;

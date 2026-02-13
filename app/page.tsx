@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
-import { useReadContract, useAccount, useSignMessage } from 'wagmi';
+import { useReadContract, useAccount, useSignMessage } from 'wagmi'; // useSignMessage eklendi
 import { useSendCalls } from 'wagmi/experimental'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
@@ -34,6 +34,7 @@ export default function Home() {
 
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
+  const { signMessageAsync } = useSignMessage(); // İmza kancası
 
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
@@ -46,6 +47,7 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
+  // --- 1. DATA FETCH ---
   const fetchAllData = useCallback(async (fid?: number) => {
     try {
       if (fid) {
@@ -53,7 +55,7 @@ export default function Home() {
         const profData = await profRes.json();
         if (profData.profile) {
           setLocation(profData.profile.city || "");
-          setOffer(profData.profile.talents || "");
+          setOffer(profData.profile.bio || "");
         }
       }
       const needsRes = await fetch('/api/needs');
@@ -62,6 +64,7 @@ export default function Home() {
     } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
+  // --- 2. SDK INIT ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -83,6 +86,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
+  // --- 3. SEARCH LOGICS ---
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -105,6 +109,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [offerQuery]);
 
+  // --- 4. HANDLERS ---
   const handleTransfer = useCallback(async () => {
     if (!selectedRecipient?.wallet_address) return setStatus("Select recipient");
     sendCalls({
@@ -132,11 +137,11 @@ export default function Home() {
     if (!currentAddress) return setStatus("Connect wallet first.");
     
     try {
-      setStatus("Posting...");
-      // BYPASS: İmza alma kısmı devre dışı bırakıldı
-      const signature = "0xbypass"; 
-      const message = "bypass";
+      setStatus("Signing...");
+      const message = `I am posting a need on Houra: ${needText.slice(0, 30)}`;
+      const signature = await signMessageAsync({ message });
 
+      setStatus("Posting...");
       const res = await fetch("/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,11 +152,10 @@ export default function Home() {
           text: needText,
           wallet_address: currentAddress, 
           price: needPrice.toString(),
-          signature: signature,
-          message: message
+          signature, // İmza eklendi
+          message    // Mesaj eklendi
         }),
       });
-
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText(""); setNeedLocation("");
@@ -160,23 +164,22 @@ export default function Home() {
         setNeeds(nData.needs || []);
         setTimeout(() => setStatus(""), 2000);
       } else {
-        const data = await res.json();
-        setStatus(`Error: ${data.error || "Failed"}`); 
+        const err = await res.json();
+        setStatus(err.error || "Error");
       }
-    } catch (e: any) { 
-      setStatus(`Error: ${e.message}`); 
-    }
+    } catch (e) { setStatus("Signature denied"); }
   };
 
   const handleSaveProfile = async () => {
-    if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
+    if (!context?.user?.fid) return setStatus("Login required");
+    if (!currentAddress) return setStatus("Connect wallet");
     
     try {
-      setStatus("Saving...");
-      // BYPASS: İmza alma kısmı devre dışı bırakıldı
-      const signature = "0xbypass";
-      const message = "bypass";
+      setStatus("Signing...");
+      const message = `Update Houra Profile: ${context.user.username}`;
+      const signature = await signMessageAsync({ message });
 
+      setStatus("Saving...");
       const res = await fetch("/api/profile", { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
@@ -187,8 +190,8 @@ export default function Home() {
           city: location, 
           talents: offer, 
           address: currentAddress,
-          signature,
-          message
+          signature, // İmza eklendi
+          message    // Mesaj eklendi
         }) 
       });
       
@@ -196,42 +199,25 @@ export default function Home() {
         setStatus("Profile Saved! ✅");
         setTimeout(() => setStatus(""), 2000);
       } else {
-        const data = await res.json();
-        setStatus(`Save failed: ${data.error || ""}`);
+        setStatus("Save failed");
       }
-    } catch (e) { setStatus("Error saving profile"); }
+    } catch (e) { setStatus("Signature denied"); }
   };
 
   const handleDeleteNeed = async (id: string) => {
-    if (!id || !context?.user?.fid || !currentAddress) return;
-    
+    if (!id || !context?.user?.fid) return;
+    setStatus("Siliniyor...");
     try {
-      setStatus("Deleting...");
-      // BYPASS: İmza alma kısmı devre dışı bırakıldı
-      const signature = "0xbypass";
-      const message = "bypass";
-
-      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          signature,
-          message,
-          address: currentAddress
-        })
-      });
-
+      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { method: "DELETE" });
       if (res.ok) {
         setNeeds(prev => prev.filter(n => n.id !== id));
-        setStatus("Deleted! ✅");
+        setStatus("Silindi! ✅");
         setTimeout(() => setStatus(""), 2000);
-      } else {
-        const err = await res.json();
-        setStatus(err.error || "Delete failed");
       }
-    } catch (e) { setStatus("Error deleting"); }
+    } catch (e) { setStatus("Error"); }
   };
 
+  // --- 5. ABOUT CONTENT ---
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
@@ -243,17 +229,25 @@ export default function Home() {
         <p>⏳ <strong>Earn:</strong> Help others with their needs and collect Houra tokens.</p>
         <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
       </div>
+      
       {!isFarcaster && (
         <div style={{ background: 'rgba(37, 99, 235, 0.1)', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', marginBottom: '15px' }}>
           <p style={{ margin: 0, fontSize: '0.85rem', color: '#fff' }}>
             The Houra app currently only works in the 
-            <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}> Base app</a>
+            <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}>
+              Base app
+            </a>
           </p>
         </div>
       )}
+
       <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
-        Learn more about <a href="https://en.wikipedia.org/wiki/Time-based_currency" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>Time-based Currencies</a>
+        Learn more about 
+        <a href="https://en.wikipedia.org/wiki/Time-based_currency" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
+          Time-based Currencies
+        </a>
       </p>
+      
       {isFarcaster && (
         <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>
           Got it!
@@ -276,6 +270,8 @@ export default function Home() {
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
+      
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
@@ -285,6 +281,7 @@ export default function Home() {
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
 
+      {/* About Modal */}
       {isAboutOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <AboutContent />
@@ -330,7 +327,7 @@ export default function Home() {
               <div key={user.fid} style={{ padding: '12px', background: '#111', borderRadius: '12px', border: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.talents || "No offer description"}</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.bio || "No offer description"}</p>
                 </div>
                 <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
               </div>

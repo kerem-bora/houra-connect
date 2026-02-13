@@ -2,21 +2,21 @@
 
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { coinbaseWallet } from 'wagmi/connectors';
 
-// Wagmi Konfigürasyonu: Base ağını tanımlıyoruz
+// Wagmi Konfigürasyonu
 const config = createConfig({
   chains: [base],
   connectors: [
     coinbaseWallet({
       appName: 'Houra',
-      preference: 'smartWalletOnly', // Base App için en iyi deneyim
+      preference: 'smartWalletOnly',
     }),
   ],
-  ssr: true,
+  ssr: true, // Next.js 15+ için önemli
   transports: {
     [base.id]: http(),
   },
@@ -24,6 +24,21 @@ const config = createConfig({
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const [mounted, setMounted] = useState(false);
+
+  // Hydration hatasını ve "i is not a constructor" hatasını önler
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Sunucu tarafında (SSR) henüz mounted değilse Wagmi'yi başlatma
+  if (!mounted) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <WagmiProvider config={config}>

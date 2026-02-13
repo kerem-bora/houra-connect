@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { crypto } from "next/dist/compiled/@edge-runtime/primitives/crypto"; // Edge runtime dostu uuid için
+
+// --- KRİTİK DEĞİŞİKLİK ---
+// crypto'yu dışarıdan import etmiyoruz, modern Node.js/Edge runtime'da global olarak var.
+// Eğer çok eski bir ortamdaysan 'crypto' kütüphanesini kullanabilirsin ama Next.js 15 için gerek yok.
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -59,7 +62,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Daily limit reached (3 posts max)" }, { status: 429 });
     }
 
-    // KRİTİK DÜZELTME: Kayıt atarken uuid'yi biz oluşturuyoruz
+    // UUID Üretimi: Modern ve güvenli yöntem
+    const generatedUuid = crypto.randomUUID();
+
     const newNeed = {
       fid,
       username,
@@ -67,7 +72,7 @@ export async function POST(req: Request) {
       text,
       price,
       wallet_address,
-      uuid: java.util.UUID.randomUUID ? undefined : crypto.randomUUID() // Standart UUID üretimi
+      uuid: generatedUuid
     };
 
     const { error: dbError } = await supabase
@@ -87,19 +92,18 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const idValue = searchParams.get('uuid'); // Frontend'den uuid geliyor
+    const idValue = searchParams.get('uuid');
     const fidValue = searchParams.get('fid');
 
     if (!idValue || !fidValue) {
       return NextResponse.json({ error: "Eksik veri" }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('needs')
       .delete()
-      .eq('uuid', idValue) // Buradaki 'uuid' veritabanındaki sütun adınla aynı olmalı
-      .eq('fid', Number(fidValue))
-      .select();
+      .eq('uuid', idValue)
+      .eq('fid', Number(fidValue));
 
     if (error) throw error;
 

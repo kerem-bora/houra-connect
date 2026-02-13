@@ -22,7 +22,8 @@ export async function GET() {
   try {
     const { data, error } = await supabase
       .from('needs')
-      .select('id, fid, username, location, text, price, wallet_address, created_at') 
+      // 'id' yerine 'uuid' çekiyoruz
+      .select('uuid, fid, username, location, text, price, wallet_address, created_at') 
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -33,7 +34,7 @@ export async function GET() {
   }
 }
 
-// --- CREATE NEW NEED (3 posts max per 24h) ---
+// --- CREATE NEW NEED ---
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -48,7 +49,6 @@ export async function POST(req: Request) {
 
     const { fid, username, location, text, price, wallet_address } = validation.data;
 
-    // Rate Limit Check using created_at
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count, error: countError } = await supabase
       .from('needs')
@@ -75,28 +75,29 @@ export async function POST(req: Request) {
   }
 }
 
-// --- DELETE NEED (Secure by ID and FID) ---
+// --- DELETE NEED (Secure by UUID and FID) ---
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    // 'id' yerine 'uuid' alıyoruz
+    const uuid = searchParams.get('uuid'); 
     const fid = searchParams.get('fid');
 
-    if (!id || !fid) {
-      return NextResponse.json({ error: "Missing ID or FID" }, { status: 400 });
+    if (!uuid || !fid) {
+      return NextResponse.json({ error: "Missing UUID or FID" }, { status: 400 });
     }
 
-    const targetId = Number(id);
+    // FID hala sayı olmalı, ama UUID string kalmalı
     const targetFid = Number(fid);
 
-    if (isNaN(targetId) || isNaN(targetFid)) {
-      return NextResponse.json({ error: "ID/FID must be numbers" }, { status: 400 });
+    if (isNaN(targetFid)) {
+      return NextResponse.json({ error: "FID must be a number" }, { status: 400 });
     }
 
     const { data, error } = await supabase
       .from('needs')
       .delete()
-      .eq('id', targetId)
+      .eq('uuid', uuid)
       .eq('fid', targetFid)
       .select();
 
@@ -107,7 +108,7 @@ export async function DELETE(req: Request) {
 
     if (!data || data.length === 0) {
       return NextResponse.json({ 
-        error: "Unauthorized: You don't own this post" 
+        error: "Unauthorized: Post not found or you don't own it" 
       }, { status: 403 });
     }
 

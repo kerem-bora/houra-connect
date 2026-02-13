@@ -157,34 +157,35 @@ export default function Home() {
     } catch (e) { setStatus("Error"); }
   };
 
-const handleDeleteNeed = async (uuid: string) => {
-  if (!uuid || !context?.user?.fid) {
-    setStatus("Error: Missing UUID or FID");
-    return;
-  }
-
-  setStatus("Deleting...");
-  
-  try {
-    // API'ye id yerine uuid parametresi gönderiyoruz
-    const res = await fetch(`/api/needs?uuid=${uuid}&fid=${context.user.fid}`, {
-      method: "DELETE",
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      setStatus("Deleted! 🗑️");
-      // Listeyi güncellerken de uuid kullanıyoruz
-      setNeeds((prev) => prev.filter((n) => n.uuid !== uuid));
-      setTimeout(() => setStatus(""), 2000);
-    } else {
-      setStatus(`API Error: ${data.error}`);
+  const handleDeleteNeed = async (uuid: string) => {
+    if (!uuid || !context?.user?.fid) {
+      setStatus("Error: Missing UUID or FID");
+      return;
     }
-  } catch (e) {
-    setStatus("Network error");
-  }
-};
+
+    setStatus("Deleting...");
+    
+    try {
+      // API artık 'uuid' parametresini bekliyor
+      const res = await fetch(`/api/needs?uuid=${uuid}&fid=${context.user.fid}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setStatus("Deleted! 🗑️");
+        // Ekranda filtreleme yaparken de uuid üzerinden yapıyoruz
+        setNeeds((prev) => prev.filter((n) => n.uuid !== uuid));
+        setTimeout(() => setStatus(""), 2000);
+      } else {
+        setStatus(`API Error: ${data.error}`);
+      }
+    } catch (e) {
+      setStatus("Network error");
+    }
+  };
+
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left', boxSizing: 'border-box' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
@@ -337,14 +338,15 @@ const handleDeleteNeed = async (uuid: string) => {
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
         {needs.map((need: any) => (
-          <div key={need.id} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222', boxSizing: 'border-box' }}>
+          // UUID kullandığımız için key artık need.uuid
+          <div key={need.uuid} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} H</span>
                 {Number(context?.user?.fid) === Number(need.fid) && (
                   <button 
-                    onClick={() => handleDeleteNeed(need.id)} 
+                    onClick={() => handleDeleteNeed(need.uuid)} // Burası uuid olarak güncellendi
                     style={{ 
                       background: '#ff4444', 
                       border: 'none', 

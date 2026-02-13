@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
-import { useReadContract, useAccount, useSignMessage } from 'wagmi';
+import { useReadContract, useAccount } from 'wagmi';
 import { useSendCalls } from 'wagmi/experimental'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
@@ -136,7 +136,10 @@ export default function Home() {
       setStatus("Posting...");
       const res = await fetch("/api/needs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-farcaster-fid": context.user.fid.toString() 
+        },
         body: JSON.stringify({
           fid: Number(context.user.fid),
           username: context.user.username,
@@ -165,7 +168,7 @@ export default function Home() {
     }
   };
 
-const handleSaveProfile = async () => {
+  const handleSaveProfile = async () => {
     if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
     
     try {
@@ -197,6 +200,7 @@ const handleSaveProfile = async () => {
       }
     } catch (e) { setStatus("Error saving profile"); }
   };
+
   const handleDeleteNeed = async (id: string) => {
     if (!id || !context?.user?.fid || !currentAddress) return;
     
@@ -204,7 +208,10 @@ const handleSaveProfile = async () => {
       setStatus("Deleting...");
       const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-farcaster-fid": context.user.fid.toString() 
+        },
         body: JSON.stringify({
           signature: "0xbypass",
           message: "bypass",
@@ -267,7 +274,6 @@ const handleSaveProfile = async () => {
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
-      {/* Header, Send Panel, Search, Needs, Profile Settings Sections... (Aynı Kalıyor) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
@@ -380,30 +386,6 @@ const handleSaveProfile = async () => {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* --- TEST / DEBUG SECTION --- */}
-      <div style={{ marginTop: '40px', padding: '20px', borderRadius: '20px', background: '#111', border: '2px dashed #333' }}>
-        <h4 style={{ margin: '0 0 15px 0', color: '#2563eb' }}>📡 Farcaster Context Test</h4>
-        {context?.user ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <img src={context.user.pfpUrl} style={{ width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #2563eb' }} />
-              <div>
-                <p style={{ margin: 0, fontWeight: 'bold' }}>{context.user.displayName || context.user.username}</p>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#666' }}>FID: {context.user.fid} | @{context.user.username}</p>
-              </div>
-            </div>
-            <details style={{ marginTop: '10px' }}>
-              <summary style={{ fontSize: '0.75rem', cursor: 'pointer', color: '#444' }}>Raw JSON Data</summary>
-              <pre style={{ fontSize: '0.65rem', background: '#000', padding: '10px', borderRadius: '10px', overflowX: 'auto', marginTop: '10px', color: '#0f0' }}>
-                {JSON.stringify(context, null, 2)}
-              </pre>
-            </details>
-          </div>
-        ) : (
-          <p style={{ fontSize: '0.8rem', color: '#666' }}>No user data detected in context.</p>
-        )}
       </div>
 
       <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy © 2026</p>

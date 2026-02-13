@@ -31,25 +31,22 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
-    // 1. Zod ile veri formatını kontrol et
     const validation = NeedSchema.safeParse(body);
     
     if (!validation.success) {
-      return NextResponse.json({ error: "Invalid data format", details: validation.error.format() }, { status: 400 });
+      return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
     const { fid, username, location, text, price, wallet_address } = validation.data;
 
-    // 2. İMZA DOĞRULAMASI (BYPASS EDİLDİ)
-    // Güvenlik kontrolünü geçici olarak devre dışı bıraktık.
-    const isSignatureValid = true; 
-
-    if (!isSignatureValid) {
-       return NextResponse.json({ error: "Signature failed" }, { status: 401 });
+    // --- KİMLİK KONTROLÜ (HEADER VERIFICATION) ---
+    const headerFid = req.headers.get("x-farcaster-fid");
+    if (!headerFid || Number(headerFid) !== Number(fid)) {
+      return NextResponse.json({ error: "Identity mismatch! POST rejected." }, { status: 401 });
     }
+    // ----------------------------------------------
 
-    // 3. Rate Limit (Günde 3 paylaşım) - Bunu koruyoruz ki veritabanın şişmesin
+    // Rate Limit (Günde 3 paylaşım)
     const { count } = await supabase.from('needs')
       .select('*', { count: 'exact', head: true })
       .eq('fid', fid)
@@ -59,7 +56,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Daily limit reached (3 needs max)" }, { status: 429 });
     }
 
-    // 4. Veritabanına Kayıt
     const { error: dbError } = await supabase.from('needs').insert([{
       fid, 
       username, 
@@ -71,11 +67,9 @@ export async function POST(req: Request) {
     }]);
 
     if (dbError) throw dbError;
-
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    console.error("Full Post Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -88,13 +82,16 @@ export async function DELETE(req: Request) {
     const body = await req.json();
 
     if (!idValue || !fidValue || !body.address) {
-      return NextResponse.json({ error: "Missing parameters for delete" }, { status: 400 });
+      return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    // İMZA DOĞRULAMASI (BYPASS EDİLDİ)
-    const isDeleteAuth = true;
-
-    if (!isDeleteAuth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // --- KİMLİK KONTROLÜ (HEADER VERIFICATION) ---
+    const headerFid = req.headers.get("x-farcaster-fid");
+    // Silecek olan kişinin FID'si ile ilandaki FID aynı mı?
+    if (!headerFid || Number(headerFid) !== Number(fidValue)) {
+      return NextResponse.json({ error: "Unauthorized delete attempt!" }, { status: 403 });
+    }
+    // ----------------------------------------------
 
     const { error } = await supabase.from('needs').delete()
       .eq('id', idValue)

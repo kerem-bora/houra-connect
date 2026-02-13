@@ -157,22 +157,27 @@ export default function Home() {
     } catch (e) { setStatus("Error"); }
   };
 
-  const handleDeleteNeed = async (id: number) => {
-    if (!confirm("Are you sure?")) return;
-    try {
-      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setStatus("Deleted! 🗑️");
-        setNeeds(prev => prev.filter(n => n.id !== id));
-        setTimeout(() => setStatus(""), 2000);
-      } else {
-        setStatus(data.error || "Delete failed");
-      }
-    } catch (e) { setStatus("Delete error"); }
-  };
+const handleDeleteNeed = async (id: number) => {
+  if (!confirm("Are you sure?")) return;
+  try {
+    const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
+      method: "DELETE",
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      setStatus("Deleted! 🗑️");
+      setNeeds(prev => prev.filter(n => n.id !== id));
+      setTimeout(() => setStatus(""), 2000);
+    } else {
+      // Hatayı detaylıca status'a yazıyoruz
+      setStatus(`Error: ${res.status} - ${data.error || 'Unknown'}`);
+    }
+  } catch (e) {
+    setStatus("Network Error: Check API path");
+  }
+}; 
 
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left', boxSizing: 'border-box' }}>

@@ -21,7 +21,6 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [isAboutOpen, setIsAboutOpen] = useState(false); 
   
-  // States
   const [sendAmount, setSendAmount] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -47,27 +46,26 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- FETCH LOGIC: Profil ve Needs Senkronizasyonu ---
+  // --- CORE DATA FETCH ---
   const fetchAllData = useCallback(async (fid?: number) => {
     try {
-      // 1. Needs listesini her zaman çek
+      // 1. Önce listeyi çek (Hızlı yükleme için)
       const needsRes = await fetch('/api/needs');
       const needsData = await needsRes.json();
-      if (needsData.needs) setNeeds(needsData.needs);
+      setNeeds(needsData.needs || []);
 
-      // 2. Profil Çekme (Eğer FID varsa)
+      // 2. Profil Çek (FID varsa)
       if (fid) {
         const profRes = await fetch(`/api/profile?fid=${fid}`);
         const profData = await profRes.json();
-        
         if (profData.profile) {
           setLocation(profData.profile.city || "");
-          // ÖNEMLİ: API'den gelen field 'talents' ise onu setliyoruz
+          // API hem 'talents' hem 'bio' dönebilir, ikisini de kontrol et
           setOffer(profData.profile.talents || profData.profile.bio || "");
         }
       }
-    } catch (e) { 
-      console.error("Veri çekme hatası:", e); 
+    } catch (e) {
+      console.error("Fetch Error:", e);
     }
   }, []);
 
@@ -75,19 +73,19 @@ export default function Home() {
     const init = async () => {
       try {
         const ctx = await sdk.context;
-        setContext(ctx);
-        
-        // Context geldiyse FID ile, gelmediyse genel çek
-        const userFid = ctx?.user?.fid;
-        if (userFid) {
+        if (ctx) {
+          setContext(ctx);
           setIsFarcaster(true);
-          await fetchAllData(userFid);
+          if (ctx.user?.fid) {
+            await fetchAllData(ctx.user.fid);
+          }
         } else {
+          // Browser View
           await fetchAllData();
         }
-        
         sdk.actions.ready();
-      } catch (e) { 
+      } catch (e) {
+        console.error("SDK Init Error:", e);
         await fetchAllData();
       } finally {
         setIsSDKLoaded(true);
@@ -96,42 +94,9 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // --- ACTIONS ---
-  const handleAddNeed = async () => {
-    if (!needText) return setStatus("Write your need.");
-    if (needText.length > 280) return setStatus("Max 280 characters.");
-    if (!context?.user?.fid) return setStatus("Farcaster login required.");
-
-    setStatus("Posting...");
-    try {
-      const res = await fetch("/api/needs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fid: Number(context.user.fid),
-          username: context.user.username,
-          location: needLocation || "Global",
-          text: needText,
-          wallet_address: currentAddress || "", 
-          price: needPrice.toString()
-        }),
-      });
-
-      if (res.ok) {
-        setStatus("Need posted! ✅");
-        setNeedText(""); 
-        setNeedLocation("");
-        await fetchAllData(context.user.fid); // Listeyi ve profili tazele
-        setTimeout(() => setStatus(""), 2000);
-      } else {
-        const data = await res.json();
-        setStatus(`Error: ${data.error || "Failed"}`);
-      }
-    } catch (e) { setStatus("Error"); }
-  };
-
+  // --- HANDLERS ---
   const handleSaveProfile = async () => {
-    if (!context?.user?.fid) return setStatus("Farcaster context missing.");
+    if (!context?.user?.fid) return setStatus("Farcaster only.");
     setStatus("Saving...");
     try {
       const res = await fetch("/api/profile", { 
@@ -150,119 +115,133 @@ export default function Home() {
         setStatus("Profile Saved! ✅");
         setTimeout(() => setStatus(""), 2000);
       }
-    } catch (e) { setStatus("Save error"); }
+    } catch (e) { setStatus("Error"); }
+  };
+
+  const handleAddNeed = async () => {
+    if (!needText || !context?.user?.fid) return setStatus("Missing info.");
+    setStatus("Posting...");
+    try {
+      const res = await fetch("/api/needs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fid: Number(context.user.fid),
+          username: context.user.username,
+          location: needLocation || "Global",
+          text: needText,
+          wallet_address: currentAddress || "", 
+          price: needPrice.toString()
+        }),
+      });
+      if (res.ok) {
+        setStatus("Posted! ✅");
+        setNeedText(""); setNeedLocation("");
+        await fetchAllData(context.user.fid);
+        setTimeout(() => setStatus(""), 2000);
+      }
+    } catch (e) { setStatus("Error"); }
   };
 
   const handleDeleteNeed = async (id: string) => {
     if (!id || !context?.user?.fid) return;
-    setStatus("Deleting...");
     try {
-      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setNeeds(prev => prev.filter(n => n.id !== id));
-        setStatus("Deleted! ✅");
-        setTimeout(() => setStatus(""), 2000);
-      }
-    } catch (e) { setStatus("Delete error"); }
+      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { method: "DELETE" });
+      if (res.ok) setNeeds(prev => prev.filter(n => n.id !== id));
+    } catch (e) { console.error(e); }
   };
 
+  // --- COMPONENTS ---
+  const AboutContent = () => (
+    <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', textAlign: 'left', color: '#fff' }}>
+      <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
+      <p style={{ fontSize: '0.9rem', color: '#ccc' }}>Houra is a peer-to-peer <strong>Time Economy</strong> platform.</p>
+      <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <p>📍 <strong>Profile:</strong> Set your location and skills.</p>
+        <p>⏳ <strong>Earn:</strong> Help others and collect tokens.</p>
+      </div>
+      <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Close</button>
+    </div>
+  );
+
+  // --- RENDER LOGIC ---
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
+  // Browser (External) View
+  if (!isFarcaster) {
+    return (
+      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <img src="/houra-logo.png" alt="Logo" style={{ width: '80px', marginBottom: '20px' }} />
+        <AboutContent />
+        <p style={{ marginTop: '20px', color: '#444' }}>Open in Base or Warpcast to use the app.</p>
+      </div>
+    );
+  }
+
+  // Main App View
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       
-      {/* HEADER */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px' }} />
-          <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
+          <img src="/houra-logo.png" alt="Houra" style={{ width: '40px' }} />
+          <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Houra</h1>
         </div>
-        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px' }}>i</button>
-      </div>
-      <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
-
-      {/* 1. SEND PANEL */}
-      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
-        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
-        {!selectedRecipient ? (
-          <div style={{ position: 'relative' }}>
-            <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none', boxSizing: 'border-box' }} />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
-            <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
-            <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem' }}>Change</button>
-          </div>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
-          <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ width: '50%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none' }} />
-          <span style={{ fontSize: '0.8rem' }}>Bal: {formattedBalance}</span>
-        </div>
-        <button style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
+        <button 
+          onClick={() => setIsAboutOpen(true)} 
+          style={{ background: '#222', border: '1px solid #333', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}
+        >i</button>
       </div>
 
-      {/* 2. ADD NEED */}
+      {isAboutOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <AboutContent />
+        </div>
+      )}
+
+      {/* Profile Settings */}
+      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '15px', border: '1px solid #222' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+          <input placeholder="City" value={location} onChange={(e) => setLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+          <textarea placeholder="Your Skills / Offer" value={offer} onChange={(e) => setOffer(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
+          <button onClick={handleSaveProfile} style={{ padding: '12px', background: '#333', color: '#fff', borderRadius: '10px', border: 'none' }}>SAVE PROFILE</button>
+        </div>
+      </details>
+
+      {/* Add Need */}
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
           <input placeholder="Location" value={needLocation} onChange={(e) => setNeedLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-          <textarea 
-            placeholder="What do you need? (Max 280 chars)" 
-            value={needText} 
-            maxLength={280}
-            onChange={(e) => setNeedText(e.target.value)} 
-            style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '80px', resize: 'none' }} 
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.7rem', color: needText.length >= 280 ? 'red' : '#666' }}>{needText.length}/280</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <input type="number" value={needPrice} onChange={(e) => setNeedPrice(e.target.value)} style={{ width: '50px', padding: '5px', background: '#000', color: '#fff', border: '1px solid #333' }} />
-              <span style={{ fontSize: '0.8rem' }}>Houra</span>
-            </div>
-          </div>
+          <textarea placeholder="What do you need?" value={needText} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
           <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>POST NEED</button>
         </div>
       </details>
 
-      {/* 3. PROFILE SETTINGS */}
-      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
-          <input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-          <textarea placeholder="What do you offer?" value={offer} onChange={(e) => setOffer(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
-          <button onClick={handleSaveProfile} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>SAVE PROFILE</button>
-        </div>
-      </details>
-
-      {/* 4. LATEST NEEDS */}
+      {/* Latest Needs */}
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
-        {needs.length === 0 ? (
-          <p style={{ color: '#444', textAlign: 'center' }}>No needs found yet.</p>
-        ) : (
-          needs.map((need: any) => (
-            <div key={need.id} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
-                {context?.user?.fid && Number(need.fid) === Number(context.user.fid) && (
-                  <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer' }}>Delete</button>
-                )}
-              </div>
-              <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location} • <span style={{ color: '#2563eb' }}>⏳ {need.price} Houra</span></span>
-                <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 'bold' }}>VIEW</button>
-              </div>
+        {needs.map((need: any) => (
+          <div key={need.id} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
+              {context?.user?.fid && Number(need.fid) === Number(context.user.fid) && (
+                <button onClick={() => handleDeleteNeed(need.id)} style={{ color: '#ff4444', background: 'none', border: 'none', fontSize: '0.7rem' }}>Delete</button>
+              )}
             </div>
-          ))
-        )}
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location} • <span style={{ color: '#2563eb' }}>⏳ {need.price} Hour</span></span>
+              <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 'bold' }}>VIEW</button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* STATUS BAR */}
       {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '12px', background: '#111', border: '1px solid #2563eb', borderRadius: '12px', textAlign: 'center' }}>
           {status}
         </div>
       )}

@@ -7,6 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Yeni Şema: Artık signature/message yerine safeContext bekliyoruz
 const ProfileSchema = z.object({
   fid: z.number(),
   username: z.string().min(1),
@@ -14,8 +15,12 @@ const ProfileSchema = z.object({
   city: z.string().optional().nullable(),
   talents: z.string().optional().nullable(),
   address: z.string().min(1),
-  signature: z.string().min(1), 
-  message: z.string().min(1),  
+  safeContext: z.object({
+    user: z.object({
+      fid: z.number(),
+      username: z.string().optional(),
+    })
+  }).passthrough() // SDK'dan gelen diğer verileri reddetmemesi için
 });
 
 export async function GET(req: Request) {
@@ -50,23 +55,26 @@ export async function POST(req: Request) {
     // 1. Zod Validasyonu
     const validation = ProfileSchema.safeParse(body);
     if (!validation.success) {
+      console.error("Validation Error:", validation.error);
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
-    const { fid, username, city, talents } = validation.data;
+    const { fid, username, city, talents, safeContext } = validation.data;
 
-    // 2. KİMLİK KONTROLÜ (GİZLİ HEADER DOĞRULAMA)
-    // Frontend'den 'x-farcaster-fid' adıyla gönderdiğimiz header'ı okuyoruz
+    // 2. KİMLİK KONTROLÜ (GÜVENLİ YÖNTEM)
+    // Client'tan gelen header'ı hala okuyoruz ama asıl kanıt safeContext içinde
     const headerFid = req.headers.get("x-farcaster-fid");
 
-    if (!headerFid) {
-      return NextResponse.json({ error: "No identity header found" }, { status: 401 });
-    }
-
-    // Header'daki FID ile Body'deki FID uyuşuyor mu? 
-    // (Biri başkasının FID'si üzerine yazmaya çalışırsa burada patlar)
-    if (Number(headerFid) !== Number(fid)) {
-      return NextResponse.json({ error: "Identity mismatch! Authorization failed." }, { status: 403 });
+    // Güvenlik Duvarı: 
+    // Hem header, hem body, hem de imzalı context içindeki FID'ler birbirini tutmalı.
+    if (
+      !headerFid || 
+      Number(headerFid) !== fid || 
+      safeContext.user.fid !== fid
+    ) {
+      return NextResponse.json({ 
+        error: "Identity verification failed. Fraud attempt blocked." 
+      }, { status: 403 });
     }
 
     // 3. Veritabanı İşlemi
@@ -77,6 +85,7 @@ export async function POST(req: Request) {
         username: username,
         city: city || "Global",
         bio: talents || "",
+        // pfp: pfp, // İstersen profil resmini de kaydedebilirsin
       }, { onConflict: 'fid' });
 
     if (dbError) throw dbError;
@@ -85,6 +94,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Profile POST Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

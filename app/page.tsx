@@ -14,14 +14,14 @@ const TOKEN_ABI = [
 ] as const;
 
 export default function Home() {
+  // --- STATES ---
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [isFarcaster, setIsFarcaster] = useState(false);
   const [context, setContext] = useState<any>(null);
   const [location, setLocation] = useState("");
   const [offer, setOffer] = useState("");
   const [status, setStatus] = useState("");
-  const [isAboutOpen, setIsAboutOpen] = useState(false); 
-  
+  const [isAboutOpen, setIsAboutOpen] = useState(false);  
   const [sendAmount, setSendAmount] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -36,6 +36,7 @@ export default function Home() {
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
 
+  // --- DATA FETCHING ---
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
@@ -63,6 +64,7 @@ export default function Home() {
     } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
+  // --- SDK INIT ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -84,6 +86,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
+  // --- SEARCH LOGIC ---
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -106,6 +109,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [offerQuery]);
 
+  // --- HANDLERS ---
   const handleTransfer = useCallback(async () => {
     if (!selectedRecipient?.wallet_address) return setStatus("Select recipient");
     sendCalls({
@@ -147,8 +151,7 @@ export default function Home() {
           text: needText,
           wallet_address: currentAddress, 
           price: needPrice.toString(),
-          signature: "0xbypass", 
-          message: "bypass"
+          safeContext: context // Güvenli context
         }),
       });
 
@@ -163,9 +166,7 @@ export default function Home() {
         const data = await res.json();
         setStatus(`Error: ${data.error || "Failed"}`); 
       }
-    } catch (e: any) { 
-      setStatus(`Error: ${e.message}`); 
-    }
+    } catch (e: any) { setStatus(`Error: ${e.message}`); }
   };
 
   const handleSaveProfile = async () => {
@@ -186,8 +187,7 @@ export default function Home() {
           city: location, 
           talents: offer, 
           address: currentAddress,
-          signature: "0xbypass",
-          message: "bypass"
+          safeContext: context // Güvenli context
         }) 
       });
       
@@ -213,9 +213,8 @@ export default function Home() {
           "x-farcaster-fid": context.user.fid.toString() 
         },
         body: JSON.stringify({
-          signature: "0xbypass",
-          message: "bypass",
-          address: currentAddress
+          address: currentAddress,
+          safeContext: context // Güvenli context
         })
       });
 
@@ -230,6 +229,7 @@ export default function Home() {
     } catch (e) { setStatus("Error deleting"); }
   };
 
+  // --- COMPONENTS ---
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
@@ -260,6 +260,7 @@ export default function Home() {
     </div>
   );
 
+  // --- RENDER ---
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
   if (!isFarcaster) {

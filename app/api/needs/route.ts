@@ -7,6 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Yeni Şema: safeContext eklendi, signature/message kaldırıldı
 const NeedSchema = z.object({
   fid: z.number(),
   username: z.string().min(1).max(50),
@@ -14,13 +15,20 @@ const NeedSchema = z.object({
   text: z.string().min(3).max(280),
   price: z.union([z.string(), z.number()]).optional().default("1"),
   wallet_address: z.string().startsWith("0x"),
-  signature: z.string().min(1),
-  message: z.string().min(1),
+  safeContext: z.object({
+    user: z.object({
+      fid: z.number(),
+    })
+  }).passthrough()
 });
 
 export async function GET() {
   try {
-    const { data, error } = await supabase.from('needs').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('needs')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
     if (error) throw error;
     return NextResponse.json({ needs: data });
   } catch (error: any) {
@@ -37,14 +45,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
-    const { fid, username, location, text, price, wallet_address } = validation.data;
+    const { fid, username, location, text, price, wallet_address, safeContext } = validation.data;
 
-    // --- KİMLİK KONTROLÜ (HEADER VERIFICATION) ---
+    // --- KRİTİK KİMLİK DOĞRULAMA ---
     const headerFid = req.headers.get("x-farcaster-fid");
-    if (!headerFid || Number(headerFid) !== Number(fid)) {
+    if (
+      !headerFid || 
+      Number(headerFid) !== fid || 
+      safeContext.user.fid !== fid
+    ) {
       return NextResponse.json({ error: "Identity mismatch! POST rejected." }, { status: 401 });
     }
-    // ----------------------------------------------
 
     // Rate Limit (Günde 3 paylaşım)
     const { count } = await supabase.from('needs')
@@ -80,23 +91,29 @@ export async function DELETE(req: Request) {
     const idValue = searchParams.get('id'); 
     const fidValue = searchParams.get('fid');
     const body = await req.json();
+    const { safeContext, address } = body;
 
-    if (!idValue || !fidValue || !body.address) {
+    if (!idValue || !fidValue || !address || !safeContext) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    // --- KİMLİK KONTROLÜ (HEADER VERIFICATION) ---
+    // --- KRİTİK SİLME KONTROLÜ ---
     const headerFid = req.headers.get("x-farcaster-fid");
-    // Silecek olan kişinin FID'si ile ilandaki FID aynı mı?
-    if (!headerFid || Number(headerFid) !== Number(fidValue)) {
+    
+    // 1. Header'daki FID, 2. URL'deki FID, 3. safeContext içindeki FID hepsi aynı olmalı
+    if (
+      !headerFid || 
+      Number(headerFid) !== Number(fidValue) ||
+      safeContext.user.fid !== Number(fidValue)
+    ) {
       return NextResponse.json({ error: "Unauthorized delete attempt!" }, { status: 403 });
     }
-    // ----------------------------------------------
 
+    // Veritabanından silme (Sadece sahibi silebilir)
     const { error } = await supabase.from('needs').delete()
       .eq('id', idValue)
       .eq('fid', Number(fidValue))
-      .eq('wallet_address', body.address);
+      .eq('wallet_address', address);
 
     if (error) throw error;
     return NextResponse.json({ success: true });

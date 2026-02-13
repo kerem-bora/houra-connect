@@ -148,31 +148,46 @@ export default function Home() {
   }, [sendCalls, refetchBalance, selectedRecipient, sendAmount]);
 
   const handleAddNeed = async () => {
+    // 1. Temel Kontroller
     if (!needText) return setStatus("Write your need.");
+    if (!context?.user?.fid) return setStatus("Farcaster login required.");
+
+    setStatus("Posting...");
     try {
       const res = await fetch("/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fid: context.user.fid,
+          fid: Number(context.user.fid), // API sayı bekliyor, garantiye alalım
           username: context.user.username,
-          location: needLocation,
+          location: needLocation || "Global", // Boşsa default verelim
           text: needText,
-          wallet_address: currentAddress,
-          price: needPrice
+          // currentAddress undefined ise boş string gönderelim ki Zod hata vermesin
+          wallet_address: currentAddress || "", 
+          price: needPrice.toString() // String olarak gönderelim
         }),
       });
+
       if (res.ok) {
         setStatus("Need posted! ✅");
-        setNeedText(""); setNeedLocation("");
+        setNeedText(""); 
+        setNeedLocation("");
+        
+        // Listeyi anında güncellemek için tekrar çekelim
         const nRes = await fetch('/api/needs');
         const nData = await nRes.json();
         setNeeds(nData.needs || []);
+        
         setTimeout(() => setStatus(""), 2000);
+      } else {
+        const errorData = await res.json();
+        // Hatanın nedenini status bar'da görelim
+        setStatus(`Error: ${errorData.error || "Check fields"}`);
       }
-    } catch (e) { setStatus("Error"); }
+    } catch (e) { 
+      setStatus("Connection error"); 
+    }
   };
-
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>

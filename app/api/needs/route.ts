@@ -2,10 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-// --- KRİTİK DEĞİŞİKLİK ---
-// crypto'yu dışarıdan import etmiyoruz, modern Node.js/Edge runtime'da global olarak var.
-// Eğer çok eski bir ortamdaysan 'crypto' kütüphanesini kullanabilirsin ama Next.js 15 için gerek yok.
-
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -17,7 +13,8 @@ const NeedSchema = z.object({
   location: z.string().max(100).optional().default("Global"),
   text: z.string().min(3).max(280),
   price: z.union([z.string(), z.number()]).optional().default("1"),
-  wallet_address: z.string().startsWith("0x").optional(),
+  // Boş string gelme ihtimaline karşı .or(z.literal("")) ekledik
+  wallet_address: z.string().startsWith("0x").optional().or(z.literal("")),
 });
 
 // --- GET: Fetch All ---
@@ -35,7 +32,7 @@ export async function GET() {
   }
 }
 
-// --- POST: Create with UUID ---
+// --- POST: Create ---
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -58,21 +55,19 @@ export async function POST(req: Request) {
       .eq('fid', fid)
       .gt('created_at', twentyFourHoursAgo);
 
-    if (count !== null && count >= 3) {
-      return NextResponse.json({ error: "Daily limit reached (3 posts max)" }, { status: 429 });
+    if (count !== null && count >= 5) {
+      return NextResponse.json({ error: "Daily limit reached" }, { status: 429 });
     }
 
-    // UUID Üretimi: Modern ve güvenli yöntem
-    const generatedUuid = crypto.randomUUID();
-
+    // KRİTİK DÜZELTME: Sütun adını 'id' yaptık (Görseldeki gibi)
     const newNeed = {
-      fid,
+      fid: Number(fid),
       username,
-      location,
+      location: location || "Global",
       text,
-      price,
-      wallet_address,
-      uuid: generatedUuid
+      price: price.toString(),
+      wallet_address: wallet_address || null,
+      id: crypto.randomUUID() // 'uuid' yerine 'id' sütununa yazıyoruz
     };
 
     const { error: dbError } = await supabase
@@ -89,11 +84,10 @@ export async function POST(req: Request) {
 }
 
 // --- DELETE: Secure Delete ---
-// --- DELETE: Secure Delete ---
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const idValue = searchParams.get('id'); // 'uuid' yerine 'id' alalım
+    const idValue = searchParams.get('id'); 
     const fidValue = searchParams.get('fid');
 
     if (!idValue || !fidValue) {
@@ -103,7 +97,7 @@ export async function DELETE(req: Request) {
     const { error } = await supabase
       .from('needs')
       .delete()
-      .eq('id', idValue) // BURASI KRİTİK: Veritabanındaki ad 'id'
+      .eq('id', idValue)
       .eq('fid', Number(fidValue));
 
     if (error) throw error;

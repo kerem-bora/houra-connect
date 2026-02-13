@@ -139,23 +139,24 @@ export default function Home() {
     try {
       setStatus("Signing...");
       const message = `I am posting a need on Houra: ${needText.slice(0, 30)}`;
-      const signature = await signMessageAsync({ message });
+   const signature = await signMessageAsync({ message });
 
-      setStatus("Posting...");
-      const res = await fetch("/api/needs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fid: Number(context.user.fid),
-          username: context.user.username,
-          location: needLocation || "Global",
-          text: needText,
-          wallet_address: currentAddress, 
-          price: needPrice.toString(),
-          signature, // İmza eklendi
-          message    // Mesaj eklendi
-        }),
-      });
+// DEBUG İÇİN GEÇİCİ OLARAK ŞÖYLE GÖNDERELİM:
+const res = await fetch("/api/needs", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    fid: Number(context.user.fid),
+    username: context.user.username,
+    location: needLocation || "Global",
+    text: needText,
+    wallet_address: currentAddress, 
+    price: needPrice.toString(),
+    // BURASI ÇOK ÖNEMLİ: String olduğundan ve 0x içerdiğinden emin oluyoruz
+    signature: String(signature).trim() as `0x${string}`, 
+    message: String(message)
+  }),
+});
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText(""); setNeedLocation("");

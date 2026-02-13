@@ -36,6 +36,15 @@ export default function Home() {
   const { sendCalls } = useSendCalls();
   const { signMessageAsync } = useSignMessage();
 
+  // --- IMZA TEMIZLEME FONKSIYONU ---
+  const cleanSignature = (sig: any): `0x${string}` => {
+    // Eğer veri objeyse içindeki signature veya hash alanını bul
+    const raw = typeof sig === 'string' ? sig : (sig?.signature || sig?.hash || JSON.stringify(sig));
+    // Sadece ilk 132 karakteri al (0x + 65 byte)
+    let cleaned = raw.startsWith('0x') ? raw : `0x${raw}`;
+    return cleaned.slice(0, 132) as `0x${string}`;
+  };
+
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
@@ -127,7 +136,6 @@ export default function Home() {
     });
   }, [sendCalls, refetchBalance, selectedRecipient, sendAmount]);
 
-  // --- ADD NEED (DÜZELTİLMİŞ) ---
   const handleAddNeed = async () => {
     if (!needText) return setStatus("Write your need.");
     if (!context?.user?.fid) return setStatus("Farcaster login required.");
@@ -136,10 +144,10 @@ export default function Home() {
     try {
       setStatus("Signing...");
       const message = `Post Need: ${needText.slice(0, 20)}`;
-      const rawSignature = await signMessageAsync({ message });
-      const signature = typeof rawSignature === 'string' ? rawSignature : (rawSignature as any).signature;
+      const rawSig = await signMessageAsync({ message });
+      const signature = cleanSignature(rawSig);
 
-      setStatus("Posting...");
+      setStatus(`Posting (Len: ${signature.length})...`);
       const res = await fetch("/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -177,8 +185,8 @@ export default function Home() {
     try {
       setStatus("Signing...");
       const message = `Update Houra Profile: ${context.user.username}`;
-      const rawSignature = await signMessageAsync({ message });
-      const signature = typeof rawSignature === 'string' ? rawSignature : (rawSignature as any).signature;
+      const rawSig = await signMessageAsync({ message });
+      const signature = cleanSignature(rawSig);
 
       setStatus("Saving...");
       const res = await fetch("/api/profile", { 
@@ -212,8 +220,8 @@ export default function Home() {
     try {
       setStatus("Signing to delete...");
       const message = `Delete Need ID: ${id}`;
-      const rawSignature = await signMessageAsync({ message });
-      const signature = typeof rawSignature === 'string' ? rawSignature : (rawSignature as any).signature;
+      const rawSig = await signMessageAsync({ message });
+      const signature = cleanSignature(rawSig);
 
       setStatus("Deleting...");
       const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 

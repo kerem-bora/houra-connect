@@ -133,12 +133,16 @@ export default function Home() {
     if (!currentAddress) return setStatus("Connect wallet first.");
     
     try {
+      setStatus("Verifying...");
+      // --- QUICK AUTH: Token Alımı ---
+      const { token } = await sdk.actions.signIn();
+
       setStatus("Posting...");
       const res = await fetch("/api/needs", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "x-farcaster-fid": context.user.fid.toString() 
+          "Authorization": `Bearer ${token}` // Token gönderimi
         },
         body: JSON.stringify({
           fid: Number(context.user.fid),
@@ -146,9 +150,7 @@ export default function Home() {
           location: needLocation || "Global",
           text: needText,
           wallet_address: currentAddress, 
-          price: needPrice.toString(),
-          signature: "0xbypass", 
-          message: "bypass"
+          price: needPrice.toString()
         }),
       });
 
@@ -172,12 +174,16 @@ export default function Home() {
     if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
     
     try {
+      setStatus("Verifying...");
+      // --- QUICK AUTH: Token Alımı ---
+      const { token } = await sdk.actions.signIn();
+
       setStatus("Saving...");
       const res = await fetch("/api/profile", { 
         method: "POST", 
         headers: { 
           "Content-Type": "application/json",
-          "x-farcaster-fid": context.user.fid.toString(), 
+          "Authorization": `Bearer ${token}` // Token gönderimi
         }, 
         body: JSON.stringify({ 
           fid: context.user.fid, 
@@ -185,9 +191,7 @@ export default function Home() {
           pfp: context.user.pfpUrl, 
           city: location, 
           talents: offer, 
-          address: currentAddress,
-          signature: "0xbypass",
-          message: "bypass"
+          address: currentAddress
         }) 
       });
       
@@ -205,18 +209,17 @@ export default function Home() {
     if (!id || !context?.user?.fid || !currentAddress) return;
     
     try {
+      setStatus("Verifying...");
+      // --- QUICK AUTH: Token Alımı ---
+      const { token } = await sdk.actions.signIn();
+
       setStatus("Deleting...");
       const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 
         method: "DELETE",
         headers: { 
           "Content-Type": "application/json",
-          "x-farcaster-fid": context.user.fid.toString() 
-        },
-        body: JSON.stringify({
-          signature: "0xbypass",
-          message: "bypass",
-          address: currentAddress
-        })
+          "Authorization": `Bearer ${token}` // Token gönderimi
+        }
       });
 
       if (res.ok) {

@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { createAppClient, viemConnector } from "@farcaster/auth-client";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const appClient = createAppClient({
+  ethereum: viemConnector(),
+});
+
+// Zod Şeması: Artık signature ve message alanlarına gerek yok
 const ProfileSchema = z.object({
   fid: z.number(),
   username: z.string().min(1),
@@ -14,9 +20,22 @@ const ProfileSchema = z.object({
   city: z.string().optional().nullable(),
   talents: z.string().optional().nullable(),
   address: z.string().min(1),
-  signature: z.string().min(1), 
-  message: z.string().min(1),  
 });
+
+// Yardımcı Fonksiyon: Farcaster Auth Token Doğrulama
+async function verifyFarcasterAuth(req: Request, expectedFid: number) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return false;
+
+  const token = authHeader.split(" ")[1];
+  
+  const { data, error } = await appClient.verifySignInToken({
+    token,
+    domain: "houra.example.com", // Manifest dosyanızdaki domain ile aynı olmalı
+  });
+
+  return !error && data && data.fid === expectedFid;
+}
 
 export async function GET(req: Request) {
   try {
@@ -30,6 +49,7 @@ export async function GET(req: Request) {
       .eq('fid', Number(fid))
       .single();
 
+    // PGRST116: Kayıt bulunamadı hatası, bunu hata olarak döndürmüyoruz
     if (error && error.code !== 'PGRST116') throw error;
     
     const profileData = data ? {
@@ -53,28 +73,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
-    const { fid, username, city, talents } = validation.data;
+    const { fid, username, city, talents, address, pfp } = validation.data;
 
-    // 2. KİMLİK KONTROLÜ (GİZLİ HEADER DOĞRULAMA)
-    // Frontend'den 'x-farcaster-fid' adıyla gönderdiğimiz header'ı okuyoruz
-    const headerFid = req.headers.get("x-farcaster-fid");
-
-    if (!headerFid) {
-      return NextResponse.json({ error: "No identity header found" }, { status: 401 });
+    // 2. BASE/FARCASTER QUICK AUTH DOĞRULAMASI
+    const isAuthorized = await verifyFarcasterAuth(req, fid);
+    if (!isAuthorized) {
+      return NextResponse.json({ 
+        error: "Identity verification failed. Unauthorized access." 
+      }, { status: 401 });
     }
 
-    // Header'daki FID ile Body'deki FID uyuşuyor mu? 
-    // (Biri başkasının FID'si üzerine yazmaya çalışırsa burada patlar)
-    if (Number(headerFid) !== Number(fid)) {
-      return NextResponse.json({ error: "Identity mismatch! Authorization failed." }, { status: 403 });
-    }
-
-    // 3. Veritabanı İşlemi
+    // 3. Veritabanı İşlemi (Upsert)
     const { error: dbError } = await supabase
       .from('profiles')
       .upsert({
         fid: fid,
         username: username,
+        pfp_url: pfp || null,
+        wallet_address: address,
         city: city || "Global",
         bio: talents || "",
       }, { onConflict: 'fid' });
@@ -85,6 +101,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Profile POST Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Profile update failed" }, { status: 500 });
   }
 }

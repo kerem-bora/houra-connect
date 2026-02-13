@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { createAppClient, viemConnector } from "@farcaster/auth-client"; // Base/Farcaster Auth kütüphanesi
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// Auth doğrulama için istemciyi hazırla
+const appClient = createAppClient({
+  ethereum: viemConnector(),
+});
 
 const NeedSchema = z.object({
   fid: z.number(),
@@ -14,9 +20,23 @@ const NeedSchema = z.object({
   text: z.string().min(3).max(280),
   price: z.union([z.string(), z.number()]).optional().default("1"),
   wallet_address: z.string().startsWith("0x"),
-  signature: z.string().min(1),
-  message: z.string().min(1),
 });
+
+// Yardımcı Fonksiyon: Token Doğrulama
+async function verifyFarcasterAuth(req: Request, expectedFid: number) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return false;
+
+  const token = authHeader.split(" ")[1];
+  
+  const { data, error } = await appClient.verifySignInToken({
+    token,
+    domain: "houra.example.com", // Kendi domain adresini yazmalısın
+  });
+
+  // Token geçerli mi ve Token içindeki FID, işlem yapılmak istenen FID ile aynı mı?
+  return !error && data && data.fid === expectedFid;
+}
 
 export async function GET() {
   try {
@@ -39,12 +59,11 @@ export async function POST(req: Request) {
 
     const { fid, username, location, text, price, wallet_address } = validation.data;
 
-    // --- KİMLİK KONTROLÜ (HEADER VERIFICATION) ---
-    const headerFid = req.headers.get("x-farcaster-fid");
-    if (!headerFid || Number(headerFid) !== Number(fid)) {
-      return NextResponse.json({ error: "Identity mismatch! POST rejected." }, { status: 401 });
+    // --- BASE AUTH VERIFICATION ---
+    const isAuthorized = await verifyFarcasterAuth(req, fid);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Unauthorized: Invalid Auth Token" }, { status: 401 });
     }
-    // ----------------------------------------------
 
     // Rate Limit (Günde 3 paylaşım)
     const { count } = await supabase.from('needs')
@@ -70,7 +89,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("POST Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
@@ -79,29 +99,28 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const idValue = searchParams.get('id'); 
     const fidValue = searchParams.get('fid');
-    const body = await req.json();
 
-    if (!idValue || !fidValue || !body.address) {
+    if (!idValue || !fidValue) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    // --- KİMLİK KONTROLÜ (HEADER VERIFICATION) ---
-    const headerFid = req.headers.get("x-farcaster-fid");
-    // Silecek olan kişinin FID'si ile ilandaki FID aynı mı?
-    if (!headerFid || Number(headerFid) !== Number(fidValue)) {
-      return NextResponse.json({ error: "Unauthorized delete attempt!" }, { status: 403 });
-    }
-    // ----------------------------------------------
+    const fid = Number(fidValue);
 
+    // --- BASE AUTH VERIFICATION ---
+    const isAuthorized = await verifyFarcasterAuth(req, fid);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Unauthorized Delete Attempt" }, { status: 401 });
+    }
+
+    // Silme işlemini yaparken sadece ID değil, FID kontrolünü de veritabanı seviyesinde yapıyoruz
     const { error } = await supabase.from('needs').delete()
       .eq('id', idValue)
-      .eq('fid', Number(fidValue))
-      .eq('wallet_address', body.address);
+      .eq('fid', fid);
 
     if (error) throw error;
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Delete operation failed" }, { status: 500 });
   }
 }

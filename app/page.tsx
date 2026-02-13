@@ -43,7 +43,7 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- DATA FETCH (Hatasız ve Eksiksiz) ---
+  // --- DATA FETCH ---
   const fetchAllData = useCallback(async (fid?: number) => {
     try {
       const needsRes = await fetch('/api/needs');
@@ -55,7 +55,6 @@ export default function Home() {
         const profData = await profRes.json();
         if (profData.profile) {
           setLocation(profData.profile.city || "");
-          // Supabase'deki 'talents' veya 'bio' hangisi doluysa onu çek
           setOffer(profData.profile.talents || profData.profile.bio || "");
         }
       }
@@ -69,10 +68,8 @@ export default function Home() {
         if (ctx) {
           setContext(ctx);
           setIsFarcaster(true);
-          // Context hazır olduğu an FID ile profil bilgilerini de çekiyoruz
           await fetchAllData(ctx.user?.fid);
         } else {
-          // Browser view için sadece needs çek
           await fetchAllData();
         }
         sdk.actions.ready();
@@ -85,7 +82,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // --- HANDLERS (Orijinal Mantık) ---
+  // --- HANDLERS ---
   const handleSaveProfile = async () => {
     if (!context?.user?.fid) return setStatus("Farcaster only.");
     setStatus("Saving...");
@@ -134,24 +131,53 @@ export default function Home() {
     } catch (e) { setStatus("Error"); }
   };
 
-  const handleDeleteNeed = async (id: string) => {
-    if (!id || !context?.user?.fid) return;
-    try {
-      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { method: "DELETE" });
-      if (res.ok) setNeeds(prev => prev.filter(n => n.id !== id));
-    } catch (e) { console.error(e); }
-  };
-
-  // --- ABOUT COMPONENT ---
+  // --- SHARED UI COMPONENTS ---
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', textAlign: 'left', color: '#fff' }}>
-      <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
-      <p style={{ fontSize: '0.9rem', color: '#ccc' }}>Houra is a peer-to-peer <strong>Time Economy</strong> platform.</p>
-      <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <p>📍 <strong>Profile:</strong> Set your location and skills.</p>
-        <p>⏳ <strong>Earn:</strong> Help others and collect tokens.</p>
+      <h2 style={{ marginTop: 0, fontSize: '1.4rem' }}>Welcome to Houra</h2>
+      <p style={{ fontSize: '0.95rem', lineHeight: '1.4', marginBottom: '20px' }}>
+        Houra is a peer-to-peer <strong>Time Economy</strong> platform.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '25px' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <span>📍</span>
+          <div>
+            <strong style={{ display: 'block' }}>Profile:</strong>
+            <span style={{ fontSize: '0.85rem', color: '#ccc' }}>Set your location and skills.</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <span>⏳</span>
+          <div>
+            <strong style={{ display: 'block' }}>Earn:</strong>
+            <span style={{ fontSize: '0.85rem', color: '#ccc' }}>Help others and collect tokens.</span>
+          </div>
+        </div>
       </div>
-      <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Close</button>
+      <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '14px', background: '#fff', color: '#000', borderRadius: '14px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Close</button>
+    </div>
+  );
+
+  const NeedsList = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
+      {needs.map((need: any) => (
+        <div key={need.id} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
+            {context?.user?.fid && Number(need.fid) === Number(context.user.fid) && (
+              <button onClick={async () => {
+                const res = await fetch(`/api/needs?id=${need.id}&fid=${context.user.fid}`, { method: "DELETE" });
+                if (res.ok) setNeeds(prev => prev.filter(n => n.id !== need.id));
+              }} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem' }}>Delete</button>
+            )}
+          </div>
+          <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location} • <span style={{ color: '#2563eb' }}>⏳ {need.price} Houra</span></span>
+            {isFarcaster && <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 'bold' }}>VIEW</button>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 
@@ -160,15 +186,21 @@ export default function Home() {
   // --- BROWSER VIEW ---
   if (!isFarcaster) {
     return (
-      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <img src="/houra-logo.png" alt="Logo" style={{ width: '80px', marginBottom: '20px' }} />
+      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <img src="/houra-logo.png" alt="Logo" style={{ width: '60px', marginBottom: '10px' }} />
+          <h1 style={{ margin: 0 }}>Houra</h1>
+        </div>
         <AboutContent />
-        <p style={{ marginTop: '20px', color: '#444' }}>Open in Base or Warpcast to use the app.</p>
+        <div style={{ width: '100%', maxWidth: '500px', marginTop: '40px' }}>
+          <h3 style={{ marginBottom: '15px' }}>Latest Needs</h3>
+          <NeedsList />
+        </div>
       </div>
     );
   }
 
-  // --- MAIN APP (STILLER GERİ GELDİ) ---
+  // --- FULL APP VIEW ---
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       
@@ -178,54 +210,33 @@ export default function Home() {
           <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px' }} />
           <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
         </div>
-        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>i</button>
+        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px' }}>i</button>
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
 
-      {/* MODAL */}
       {isAboutOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <AboutContent />
         </div>
       )}
 
-      {/* 1. SEND PANEL (GRADYANTLI) */}
+      {/* 1. SEND PANEL */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
-        {!selectedRecipient ? (
-          <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none', boxSizing: 'border-box' }} />
-        ) : (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
-            <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
-            <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem' }}>Change</button>
-          </div>
-        )}
+        <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
           <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ width: '50%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none' }} />
           <span style={{ fontSize: '0.8rem' }}>Bal: {formattedBalance}</span>
         </div>
-        <button style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
+        <button style={{ width: '100%', padding: '15px', borderRadius: '16px', background: 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
       </div>
 
-      {/* 2. ADD NEED (KARAKTER LİMİTLİ) */}
+      {/* 2. ADD NEED */}
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
           <input placeholder="Location" value={needLocation} onChange={(e) => setNeedLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-          <textarea 
-            placeholder="What do you need? (Max 280 chars)" 
-            value={needText} 
-            maxLength={280}
-            onChange={(e) => setNeedText(e.target.value)} 
-            style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '80px', resize: 'none' }} 
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.7rem', color: needText.length >= 280 ? 'red' : '#666' }}>{needText.length}/280</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <input type="number" value={needPrice} onChange={(e) => setNeedPrice(e.target.value)} style={{ width: '50px', padding: '5px', background: '#000', color: '#fff', border: '1px solid #333' }} />
-              <span style={{ fontSize: '0.8rem' }}>Houra</span>
-            </div>
-          </div>
+          <textarea placeholder="What do you need? (Max 280)" value={needText} maxLength={280} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '80px', resize: 'none' }} />
           <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>POST NEED</button>
         </div>
       </details>
@@ -240,29 +251,12 @@ export default function Home() {
         </div>
       </details>
 
-      {/* 4. LATEST NEEDS LIST */}
+      {/* 4. LATEST NEEDS */}
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
-        {needs.map((need: any) => (
-          <div key={need.id} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
-              {context?.user?.fid && Number(need.fid) === Number(context.user.fid) && (
-                <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer' }}>Delete</button>
-              )}
-            </div>
-            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location} • <span style={{ color: '#2563eb' }}>⏳ {need.price} Houra</span></span>
-              <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 'bold' }}>VIEW</button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <NeedsList />
 
-      {/* STATUS BAR */}
       {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#111', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center' }}>
           {status}
         </div>
       )}

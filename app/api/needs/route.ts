@@ -33,21 +33,17 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     
-    // --- DEBUG: GELEN VERİ KONTROLÜ ---
-    console.log("POST Body:", {
-      address: body.wallet_address,
-      sigLength: body.signature?.length,
-      msg: body.message
-    });
-
-    const validation = NeedSchema.safeParse(body);
-    if (!validation.success) {
+    // İmzanın ne olduğunu hata olarak fırlatıp ekranda görelim
+    const sigPreview = body.signature ? String(body.signature).substring(0, 10) : "YOK";
+    const sigLength = body.signature ? String(body.signature).length : 0;
+    
+    // EĞER İMZA 132 DEĞİLSE BURADA DUR VE BİZE DETAY VER
+    if (sigLength !== 132) {
       return NextResponse.json({ 
-        error: "Zod Validation Failed", 
-        details: validation.error.format() 
+        error: `IMZA HATALI! Boyut: ${sigLength}, İlk 10 Karakter: ${sigPreview}`,
+        received_data: body.signature // Gelen veriyi aynen geri gönder
       }, { status: 400 });
     }
-
     const { fid, username, location, text, price, wallet_address, signature, message } = validation.data;
 
     // --- DEBUG: DOĞRULAMA ÖNCESİ ---

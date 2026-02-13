@@ -169,37 +169,37 @@ export default function Home() {
     } catch (e: any) { setStatus(`Error: ${e.message}`); }
   };
 
-  const handleSaveProfile = async () => {
-    if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
+const handleSaveProfile = async () => {
+  if (!context?.user?.fid || !currentAddress) return;
+  
+  try {
+    setStatus("Signing & Saving...");
     
-    try {
-      setStatus("Saving...");
-      const res = await fetch("/api/profile", { 
-        method: "POST", 
-        headers: { 
-          "Content-Type": "application/json",
-          "x-farcaster-fid": context.user.fid.toString(), 
-        }, 
-        body: JSON.stringify({ 
-          fid: context.user.fid, 
-          username: context.user.username, 
-          pfp: context.user.pfpUrl, 
-          city: location, 
-          talents: offer, 
-          address: currentAddress,
-          safeContext: context // Güvenli context
-        }) 
-      });
-      
-      if (res.ok) {
-        setStatus("Profile Saved! ✅");
-        setTimeout(() => setStatus(""), 2000);
-      } else {
-        const data = await res.json();
-        setStatus(`Save failed: ${data.error || ""}`);
-      }
-    } catch (e) { setStatus("Error saving profile"); }
-  };
+    // 1. Kullanıcıya hissettirmeden imzalı token al
+    const { token } = await sdk.actions.signIn(); 
+
+    // 2. İsteği gönder
+    const res = await fetch("/api/profile", { 
+      method: "POST", 
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}` // Token eklendi
+      }, 
+      body: JSON.stringify({ 
+        fid: context.user.fid, 
+        username: context.user.username, 
+        city: location, 
+        talents: offer, 
+        address: currentAddress
+      }) 
+    });
+    
+    if (res.ok) setStatus("Profile Saved! ✅");
+    else setStatus("Error saving profile");
+  } catch (e) { 
+    setStatus("Error signing request"); 
+  }
+};
 
   const handleDeleteNeed = async (id: string) => {
     if (!id || !context?.user?.fid || !currentAddress) return;

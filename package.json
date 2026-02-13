@@ -14,6 +14,7 @@
     "@farcaster/frame-sdk": "^0.1.14",
     "@farcaster/miniapp-sdk": "^0.2.3",
     "@neynar/nodejs-sdk": "^3.131.0",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@supabase/supabase-js": "^2.42.0",
     "@tanstack/react-query": "^5.90.21",
     "next": "^15.1.0",

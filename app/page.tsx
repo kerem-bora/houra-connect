@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
-import { useReadContract, useAccount } from 'wagmi';
+import { useReadContract, useAccount, useSignMessage } from 'wagmi'; // useSignMessage eklendi
 import { useSendCalls } from 'wagmi/experimental'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
@@ -34,6 +34,7 @@ export default function Home() {
 
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
+  const { signMessageAsync } = useSignMessage(); // İmza kancası
 
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
@@ -46,7 +47,7 @@ export default function Home() {
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
     : "0";
 
-  // --- 1. PROFIL VE NEEDS DATA FETCH (TAMIR EDILDI) ---
+  // --- 1. DATA FETCH ---
   const fetchAllData = useCallback(async (fid?: number) => {
     try {
       if (fid) {
@@ -54,7 +55,6 @@ export default function Home() {
         const profData = await profRes.json();
         if (profData.profile) {
           setLocation(profData.profile.city || "");
-          // Orijinal kodda bio kullanılıyordu, onu koruyoruz
           setOffer(profData.profile.bio || "");
         }
       }
@@ -64,7 +64,7 @@ export default function Home() {
     } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
-  // --- 2. SDK INIT (TAMIR EDILDI) ---
+  // --- 2. SDK INIT ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -74,12 +74,10 @@ export default function Home() {
           setIsFarcaster(true);
           await fetchAllData(ctx.user.fid);
         } else {
-          // SDK var ama user yoksa (browser gibi)
           await fetchAllData();
         }
         sdk.actions.ready();
       } catch (e) {
-        // Tamamen dış tarayıcı
         await fetchAllData();
       } finally {
         setIsSDKLoaded(true);
@@ -88,7 +86,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // --- 3. SEARCH LOGICS (ORIJINAL HALI) ---
+  // --- 3. SEARCH LOGICS ---
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -136,8 +134,14 @@ export default function Home() {
   const handleAddNeed = async () => {
     if (!needText) return setStatus("Write your need.");
     if (!context?.user?.fid) return setStatus("Farcaster login required.");
-    setStatus("Posting...");
+    if (!currentAddress) return setStatus("Connect wallet first.");
+    
     try {
+      setStatus("Signing...");
+      const message = `I am posting a need on Houra: ${needText.slice(0, 30)}`;
+      const signature = await signMessageAsync({ message });
+
+      setStatus("Posting...");
       const res = await fetch("/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,8 +150,10 @@ export default function Home() {
           username: context.user.username,
           location: needLocation || "Global",
           text: needText,
-          wallet_address: currentAddress || "", 
-          price: needPrice.toString()
+          wallet_address: currentAddress, 
+          price: needPrice.toString(),
+          signature, // İmza eklendi
+          message    // Mesaj eklendi
         }),
       });
       if (res.ok) {
@@ -157,24 +163,81 @@ export default function Home() {
         const nData = await nRes.json();
         setNeeds(nData.needs || []);
         setTimeout(() => setStatus(""), 2000);
+      } else {
+        const err = await res.json();
+        setStatus(err.error || "Error");
       }
-    } catch (e) { setStatus("Connection error"); }
+    } catch (e) { setStatus("Signature denied"); }
   };
 
-  const handleDeleteNeed = async (id: string) => {
-    if (!id || !context?.user?.fid) return;
-    setStatus("Siliniyor...");
+  const handleSaveProfile = async () => {
+    if (!context?.user?.fid) return setStatus("Login required");
+    if (!currentAddress) return setStatus("Connect wallet");
+    
     try {
-      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { method: "DELETE" });
+      setStatus("Signing...");
+      const message = `Update Houra Profile: ${context.user.username}`;
+      const signature = await signMessageAsync({ message });
+
+      setStatus("Saving...");
+      const res = await fetch("/api/profile", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ 
+          fid: context.user.fid, 
+          username: context.user.username, 
+          pfp: context.user.pfpUrl, 
+          city: location, 
+          talents: offer, 
+          address: currentAddress,
+          signature, // İmza eklendi
+          message    // Mesaj eklendi
+        }) 
+      });
+      
       if (res.ok) {
-        setNeeds(prev => prev.filter(n => n.id !== id));
-        setStatus("Silindi! ✅");
+        setStatus("Profile Saved! ✅");
         setTimeout(() => setStatus(""), 2000);
+      } else {
+        setStatus("Save failed");
       }
-    } catch (e) { setStatus("Error"); }
+    } catch (e) { setStatus("Signature denied"); }
   };
 
-  // --- 5. ABOUT CONTENT (ORIJINAL METIN) ---
+const handleDeleteNeed = async (id: string) => {
+  if (!id || !context?.user?.fid || !currentAddress) return;
+  
+  try {
+    setStatus("Signing to delete...");
+    // Silme işlemi için benzersiz bir mesaj oluşturuyoruz
+    const message = `Delete Need ID: ${id}`;
+    const signature = await signMessageAsync({ message });
+
+    setStatus("Deleting...");
+    const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        signature,
+        message,
+        address: currentAddress
+      })
+    });
+
+    if (res.ok) {
+      setNeeds(prev => prev.filter(n => n.id !== id));
+      setStatus("Deleted! ✅");
+      setTimeout(() => setStatus(""), 2000);
+    } else {
+      const err = await res.json();
+      setStatus(err.error || "Delete failed");
+    }
+  } catch (e) { 
+    setStatus("Signature denied"); 
+  }
+};
+
+  // --- 5. ABOUT CONTENT ---
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
@@ -215,7 +278,6 @@ export default function Home() {
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
-  // --- EXTERNAL BROWSER VIEW (DÜZELTILDI - NEEDS KALDIRILDI) ---
   if (!isFarcaster) {
     return (
       <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -226,7 +288,6 @@ export default function Home() {
     );
   }
 
-  // --- MAIN APP VIEW (TAMIR EDILDI) ---
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       
@@ -240,14 +301,14 @@ export default function Home() {
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
 
-      {/* About Modal (Düzeltildi) */}
+      {/* About Modal */}
       {isAboutOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <AboutContent />
         </div>
       )}
       
-      {/* 1. SEND PANEL (ORIJINAL) */}
+      {/* 1. SEND PANEL */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
         {!selectedRecipient ? (
@@ -276,7 +337,7 @@ export default function Home() {
         <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
       </div>
 
-      {/* 2. SEARCH FOR OFFERS (ORIJINAL) */}
+      {/* 2. SEARCH FOR OFFERS */}
       <div style={{ marginBottom: '20px' }}>
         <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: '#fff' }}>Search for Offers</h3>
         <input placeholder="Search offer, location, or user..." value={offerQuery} onChange={(e) => setOfferQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff', boxSizing: 'border-box' }} />
@@ -295,7 +356,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* 3. ADD YOUR NEED (ORIJINAL) */}
+      {/* 3. ADD YOUR NEED */}
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
@@ -313,21 +374,17 @@ export default function Home() {
         </div>
       </details>
 
-      {/* 4. PROFILE SETTINGS (ORIJINAL - FETCH DÜZELTILDI) */}
+      {/* 4. PROFILE SETTINGS */}
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
           <input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
           <textarea placeholder="What do you offer?" value={offer} onChange={(e) => setOffer(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
-          <button onClick={async () => {
-            await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city: location, talents: offer, address: currentAddress }) });
-            setStatus("Profile Saved! ✅");
-            setTimeout(() => setStatus(""), 2000);
-          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>SAVE PROFILE</button>
+          <button onClick={handleSaveProfile} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>SAVE PROFILE</button>
         </div>
       </details>
 
-      {/* 5. LATEST NEEDS (ORIJINAL) */}
+      {/* 5. LATEST NEEDS */}
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
         {needs.map((need: any, idx: number) => (

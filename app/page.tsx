@@ -158,26 +158,34 @@ export default function Home() {
   };
 
 const handleDeleteNeed = async (id: number) => {
+    console.log("Deleting id:", id);
+  
+  if (!id) {
+    setStatus("Error: Missing ID");
+    return;
+  }
+
   if (!confirm("Are you sure?")) return;
+
   try {
-    const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, {
+    const res = await fetch(`/api/needs?id=${id}&fid=${context?.user?.fid}`, {
       method: "DELETE",
     });
-    
+
     const data = await res.json();
-    
+
     if (res.ok) {
       setStatus("Deleted! 🗑️");
-      setNeeds(prev => prev.filter(n => n.id !== id));
+      setNeeds((prev) => prev.filter((n) => n.id !== id));
       setTimeout(() => setStatus(""), 2000);
     } else {
-      // Hatayı detaylıca status'a yazıyoruz
-      setStatus(`Error: ${res.status} - ${data.error || 'Unknown'}`);
+      setStatus(`Error: ${data.error}`);
     }
   } catch (e) {
-    setStatus("Network Error: Check API path");
+    setStatus("Network error");
+    console.error(e);
   }
-}; 
+};
 
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left', boxSizing: 'border-box' }}>

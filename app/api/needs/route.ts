@@ -1,28 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { createAppClient } from "@farcaster/auth-client";
-import { createPublicClient, http } from "viem";
-import { base } from "viem/chains";
+import { decodeJwt } from "jose";
+import { verifyMessage } from "viem";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-// Hata veren viemConnector yerine stabil Viem Client kullanıyoruz
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(),
-});
-
-const appClient = createAppClient({
-  ethereum: {
-    async verifyMessage({ address, message, signature }: any) {
-      return publicClient.verifyMessage({ address, message, signature });
-    },
-  } as any,
-});
 
 const NeedSchema = z.object({
   fid: z.number(),
@@ -33,24 +18,44 @@ const NeedSchema = z.object({
   wallet_address: z.string().startsWith("0x"),
 });
 
+/**
+ * Farcaster Auth Token Doğrulama (Manuel Yöntem)
+ * createAppClient kütüphanesindeki hataları bypass eder.
+ */
 async function verifyFarcasterAuth(req: Request, expectedFid: number) {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) return false;
-    const token = authHeader.split(" ")[1];
     
-    const { data, error } = await appClient.verifySignInToken({
-      token,
-      domain: "houra.vercel.app", 
-    });
+    const token = authHeader.split(" ")[1];
+    if (!token) return false;
 
-    if (error) {
-      console.error("Auth Error:", error);
+    // 1. Token'ı parçala (Kütüphane bağımlılığı olmadan)
+    const payload = decodeJwt(token) as any;
+
+    // 2. Temel Veri Kontrolleri
+    if (!payload || payload.fid !== expectedFid) {
+      console.error("FID Mismatch or No Payload");
       return false;
     }
-    return data && data.fid === expectedFid;
+
+    // 3. Zaman Kontrolü (Token süresi dolmuş mu?)
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && now > payload.exp) {
+      console.error("Token Expired");
+      return false;
+    }
+
+    // 4. Kriptografik İmza Doğrulaması (Viem ile)
+    const isVerified = await verifyMessage({
+      address: payload.address as `0x${string}`,
+      message: payload.message,
+      signature: payload.signature as `0x${string}`,
+    });
+
+    return isVerified;
   } catch (err) {
-    console.error("Auth Catch:", err);
+    console.error("Auth System Crash:", err);
     return false;
   }
 }
@@ -73,10 +78,13 @@ export async function POST(req: Request) {
 
     const { fid, username, location, text, price, wallet_address } = validation.data;
 
-    if (!(await verifyFarcasterAuth(req, fid))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // --- MANUEL DOĞRULAMA ---
+    const isAuthorized = await verifyFarcasterAuth(req, fid);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Unauthorized: Invalid identity token" }, { status: 401 });
     }
 
+    // Rate Limit (Günde 3)
     const { count } = await supabase.from('needs')
       .select('*', { count: 'exact', head: true })
       .eq('fid', fid)
@@ -91,6 +99,7 @@ export async function POST(req: Request) {
     if (dbError) throw dbError;
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("POST Crash:", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }
 }

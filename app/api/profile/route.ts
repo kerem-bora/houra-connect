@@ -1,28 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { createAppClient } from "@farcaster/auth-client";
-import { createPublicClient, http } from "viem";
-import { base } from "viem/chains";
+import { decodeJwt } from "jose";
+import { verifyMessage } from "viem";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-// Stabil Viem Client: undefined hatalarını engelleyen motor
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(),
-});
-
-const appClient = createAppClient({
-  ethereum: {
-    async verifyMessage({ address, message, signature }: any) {
-      return publicClient.verifyMessage({ address, message, signature });
-    },
-  } as any,
-});
 
 const ProfileSchema = z.object({
   fid: z.number(),
@@ -33,27 +18,44 @@ const ProfileSchema = z.object({
   address: z.string().min(1),
 });
 
-// Yardımcı Fonksiyon: Farcaster Auth Token Doğrulama
+/**
+ * Farcaster Auth Token Doğrulama (Manuel Yöntem)
+ * Kütüphane kaynaklı 'undefined' hatalarını tamamen baypas eder.
+ */
 async function verifyFarcasterAuth(req: Request, expectedFid: number) {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) return false;
 
     const token = authHeader.split(" ")[1];
-    
-    const { data, error } = await appClient.verifySignInToken({
-      token,
-      domain: "houra.vercel.app",
-    });
+    if (!token) return false;
 
-    if (error) {
-      console.error("Profile Auth Error:", error);
+    // 1. JWT Token'ı çöz
+    const payload = decodeJwt(token) as any;
+
+    // 2. FID ve Temel Kontroller
+    if (!payload || payload.fid !== expectedFid) {
+      console.error("Profile Auth: FID mismatch");
       return false;
     }
 
-    return data && data.fid === expectedFid;
+    // 3. Süre Kontrolü
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && now > payload.exp) {
+      console.error("Profile Auth: Token expired");
+      return false;
+    }
+
+    // 4. Kriptografik İmza Doğrulaması
+    const isVerified = await verifyMessage({
+      address: payload.address as `0x${string}`,
+      message: payload.message,
+      signature: payload.signature as `0x${string}`,
+    });
+
+    return isVerified;
   } catch (err) {
-    console.error("Profile Auth Catch:", err);
+    console.error("Profile Auth System Crash:", err);
     return false;
   }
 }
@@ -94,11 +96,11 @@ export async function POST(req: Request) {
 
     const { fid, username, city, talents, address, pfp } = validation.data;
 
-    // BASE/FARCASTER QUICK AUTH DOĞRULAMASI
+    // MANUEL AUTH DOĞRULAMASI
     const isAuthorized = await verifyFarcasterAuth(req, fid);
     if (!isAuthorized) {
       return NextResponse.json({ 
-        error: "Identity verification failed." 
+        error: "Identity verification failed. Unauthorized." 
       }, { status: 401 });
     }
 

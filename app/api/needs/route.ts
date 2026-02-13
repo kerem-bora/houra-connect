@@ -18,18 +18,22 @@ const NeedSchema = z.object({
 });
 
 // --- FETCH ALL NEEDS ---
+// --- FETCH ALL NEEDS (api/needs/route.ts içinde) ---
 export async function GET() {
   try {
     const { data, error } = await supabase
       .from('needs')
-      // 'id' yerine 'uuid' çekiyoruz
-      .select('uuid, fid, username, location, text, price, wallet_address, created_at') 
+      // Hem uuid hem id çekelim ki frontend neyi isterse onu kullansın
+      .select('*') 
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+    
+    // Log atalım ki terminalde ne geldiğini gör
+    console.log("Veritabanından gelen data:", data?.[0]); 
+    
     return NextResponse.json({ needs: data });
   } catch (error: any) {
-    console.error("Fetch Error:", error);
     return NextResponse.json({ error: "Database fetch failed" }, { status: 500 });
   }
 }

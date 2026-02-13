@@ -1,18 +1,29 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { createAppClient, viemConnector } from "@farcaster/auth-client";
+import { createAppClient } from "@farcaster/auth-client";
+import { createPublicClient, http } from "viem";
+import { base } from "viem/chains";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const appClient = createAppClient({
-  ethereum: viemConnector(),
+// Stabil Viem Client: undefined hatalarını engelleyen motor
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(),
 });
 
-// Zod Şeması: Artık signature ve message alanlarına gerek yok
+const appClient = createAppClient({
+  ethereum: {
+    async verifyMessage({ address, message, signature }: any) {
+      return publicClient.verifyMessage({ address, message, signature });
+    },
+  } as any,
+});
+
 const ProfileSchema = z.object({
   fid: z.number(),
   username: z.string().min(1),
@@ -24,17 +35,27 @@ const ProfileSchema = z.object({
 
 // Yardımcı Fonksiyon: Farcaster Auth Token Doğrulama
 async function verifyFarcasterAuth(req: Request, expectedFid: number) {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) return false;
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) return false;
 
-  const token = authHeader.split(" ")[1];
-  
-  const { data, error } = await appClient.verifySignInToken({
-    token,
-    domain: "houra.example.com", // Manifest dosyanızdaki domain ile aynı olmalı
-  });
+    const token = authHeader.split(" ")[1];
+    
+    const { data, error } = await appClient.verifySignInToken({
+      token,
+      domain: "houra.vercel.app",
+    });
 
-  return !error && data && data.fid === expectedFid;
+    if (error) {
+      console.error("Profile Auth Error:", error);
+      return false;
+    }
+
+    return data && data.fid === expectedFid;
+  } catch (err) {
+    console.error("Profile Auth Catch:", err);
+    return false;
+  }
 }
 
 export async function GET(req: Request) {
@@ -49,7 +70,6 @@ export async function GET(req: Request) {
       .eq('fid', Number(fid))
       .single();
 
-    // PGRST116: Kayıt bulunamadı hatası, bunu hata olarak döndürmüyoruz
     if (error && error.code !== 'PGRST116') throw error;
     
     const profileData = data ? {
@@ -67,7 +87,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     
-    // 1. Zod Validasyonu
     const validation = ProfileSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
@@ -75,15 +94,15 @@ export async function POST(req: Request) {
 
     const { fid, username, city, talents, address, pfp } = validation.data;
 
-    // 2. BASE/FARCASTER QUICK AUTH DOĞRULAMASI
+    // BASE/FARCASTER QUICK AUTH DOĞRULAMASI
     const isAuthorized = await verifyFarcasterAuth(req, fid);
     if (!isAuthorized) {
       return NextResponse.json({ 
-        error: "Identity verification failed. Unauthorized access." 
+        error: "Identity verification failed." 
       }, { status: 401 });
     }
 
-    // 3. Veritabanı İşlemi (Upsert)
+    // Veritabanı İşlemi (Upsert)
     const { error: dbError } = await supabase
       .from('profiles')
       .upsert({

@@ -158,30 +158,26 @@ export default function Home() {
     } catch (e) { setStatus("Error posting need"); }
   };
 
-  const handleDeleteNeed = async (uuid: string) => {
-    if (!uuid || !context?.user?.fid) {
-      setStatus("Error: Missing Data");
-      return;
-    }
-    setStatus("Deleting...");
-    try {
-      const res = await fetch(`/api/needs?uuid=${uuid}&fid=${context.user.fid}`, {
-        method: "DELETE",
-      });
+ const handleDeleteNeed = async (uuid: string) => {
+  if (!uuid || !context?.user?.fid) return;
+  
+  setStatus("Siliniyor...");
+  try {
+    const res = await fetch(`/api/needs?uuid=${uuid}&fid=${context.user.fid}`, {
+      method: "DELETE",
+    });
+    
+    if (res.ok) {
+      setNeeds(prev => prev.filter(n => n.uuid !== uuid));
+      setStatus("Silindi! ✅");
+    } else {
       const data = await res.json();
-      
-      if (res.ok) {
-        setStatus("Deleted! 🗑️");
-        // State'den anında kaldır
-        setNeeds(prev => prev.filter(n => n.uuid !== uuid));
-        setTimeout(() => setStatus(""), 2000);
-      } else {
-        setStatus(`API Error: ${data.error}`);
-      }
-    } catch (e) { 
-      setStatus("Network error"); 
+      setStatus(`Hata: ${data.error}`);
     }
-  };
+  } catch (e) {
+    setStatus("Bağlantı hatası");
+  }
+};
 
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left', boxSizing: 'border-box' }}>

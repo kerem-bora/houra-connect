@@ -87,36 +87,24 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const uuid = searchParams.get('uuid'); 
-    const fid = searchParams.get('fid');
+    const idValue = searchParams.get('uuid'); // Frontend'den uuid geliyor
+    const fidValue = searchParams.get('fid');
 
-    if (!uuid || !fid) {
-      return NextResponse.json({ error: "Missing UUID or FID" }, { status: 400 });
+    if (!idValue || !fidValue) {
+      return NextResponse.json({ error: "Eksik veri" }, { status: 400 });
     }
-
-    // Terminal logu: Hangi UUID ve FID silinmeye çalışıyor gör
-    console.log(`Attempting to delete need: UUID=${uuid}, FID=${fid}`);
 
     const { data, error } = await supabase
       .from('needs')
       .delete()
-      .eq('uuid', uuid)
-      .eq('fid', Number(fid))
+      .eq('uuid', idValue) // Buradaki 'uuid' veritabanındaki sütun adınla aynı olmalı
+      .eq('fid', Number(fidValue))
       .select();
 
-    if (error) {
-      console.error("Supabase Error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    if (!data || data.length === 0) {
-      return NextResponse.json({ 
-        error: "Post not found or unauthorized" 
-      }, { status: 403 });
-    }
+    if (error) throw error;
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

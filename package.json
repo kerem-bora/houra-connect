@@ -14,20 +14,15 @@
     "@farcaster/frame-sdk": "^0.1.14",
     "@farcaster/miniapp-sdk": "^0.2.3",
     "@neynar/nodejs-sdk": "^3.131.0",
-    "@react-native-async-storage/async-storage": "^2.2.0",
     "@supabase/supabase-js": "^2.42.0",
     "@tanstack/react-query": "^5.90.21",
     "next": "^15.1.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "viem": "^2.45.3",
     "wagmi": "^2.19.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "typescript": "^5"
+     "typescript": "^5"
   }
 }

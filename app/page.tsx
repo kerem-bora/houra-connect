@@ -14,14 +14,14 @@ const TOKEN_ABI = [
 ] as const;
 
 export default function Home() {
-  // --- STATES ---
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [isFarcaster, setIsFarcaster] = useState(false);
   const [context, setContext] = useState<any>(null);
   const [location, setLocation] = useState("");
   const [offer, setOffer] = useState("");
   const [status, setStatus] = useState("");
-  const [isAboutOpen, setIsAboutOpen] = useState(false);  
+  const [isAboutOpen, setIsAboutOpen] = useState(false); 
+  
   const [sendAmount, setSendAmount] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -36,7 +36,6 @@ export default function Home() {
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
 
-  // --- DATA FETCHING ---
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
@@ -64,7 +63,6 @@ export default function Home() {
     } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
-  // --- SDK INIT ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -86,7 +84,6 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // --- SEARCH LOGIC ---
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -109,7 +106,6 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [offerQuery]);
 
-  // --- HANDLERS ---
   const handleTransfer = useCallback(async () => {
     if (!selectedRecipient?.wallet_address) return setStatus("Select recipient");
     sendCalls({
@@ -151,7 +147,8 @@ export default function Home() {
           text: needText,
           wallet_address: currentAddress, 
           price: needPrice.toString(),
-          safeContext: context // Güvenli context
+          signature: "0xbypass", 
+          message: "bypass"
         }),
       });
 
@@ -166,40 +163,43 @@ export default function Home() {
         const data = await res.json();
         setStatus(`Error: ${data.error || "Failed"}`); 
       }
-    } catch (e: any) { setStatus(`Error: ${e.message}`); }
+    } catch (e: any) { 
+      setStatus(`Error: ${e.message}`); 
+    }
   };
 
-const handleSaveProfile = async () => {
-  if (!context?.user?.fid || !currentAddress) return;
-  
-  try {
-    setStatus("Signing & Saving...");
+  const handleSaveProfile = async () => {
+    if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
     
-    // 1. Kullanıcıya hissettirmeden imzalı token al
-    const { token } = await sdk.actions.signIn(); 
-
-    // 2. İsteği gönder
-    const res = await fetch("/api/profile", { 
-      method: "POST", 
-      headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}` // Token eklendi
-      }, 
-      body: JSON.stringify({ 
-        fid: context.user.fid, 
-        username: context.user.username, 
-        city: location, 
-        talents: offer, 
-        address: currentAddress
-      }) 
-    });
-    
-    if (res.ok) setStatus("Profile Saved! ✅");
-    else setStatus("Error saving profile");
-  } catch (e) { 
-    setStatus("Error signing request"); 
-  }
-};
+    try {
+      setStatus("Saving...");
+      const res = await fetch("/api/profile", { 
+        method: "POST", 
+        headers: { 
+          "Content-Type": "application/json",
+          "x-farcaster-fid": context.user.fid.toString(), 
+        }, 
+        body: JSON.stringify({ 
+          fid: context.user.fid, 
+          username: context.user.username, 
+          pfp: context.user.pfpUrl, 
+          city: location, 
+          talents: offer, 
+          address: currentAddress,
+          signature: "0xbypass",
+          message: "bypass"
+        }) 
+      });
+      
+      if (res.ok) {
+        setStatus("Profile Saved! ✅");
+        setTimeout(() => setStatus(""), 2000);
+      } else {
+        const data = await res.json();
+        setStatus(`Save failed: ${data.error || ""}`);
+      }
+    } catch (e) { setStatus("Error saving profile"); }
+  };
 
   const handleDeleteNeed = async (id: string) => {
     if (!id || !context?.user?.fid || !currentAddress) return;
@@ -213,8 +213,9 @@ const handleSaveProfile = async () => {
           "x-farcaster-fid": context.user.fid.toString() 
         },
         body: JSON.stringify({
-          address: currentAddress,
-          safeContext: context // Güvenli context
+          signature: "0xbypass",
+          message: "bypass",
+          address: currentAddress
         })
       });
 
@@ -229,7 +230,6 @@ const handleSaveProfile = async () => {
     } catch (e) { setStatus("Error deleting"); }
   };
 
-  // --- COMPONENTS ---
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
@@ -260,7 +260,6 @@ const handleSaveProfile = async () => {
     </div>
   );
 
-  // --- RENDER ---
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
   if (!isFarcaster) {

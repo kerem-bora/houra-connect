@@ -19,8 +19,8 @@ const NeedSchema = z.object({
 });
 
 /**
- * Farcaster Auth Token Doğrulama (Manuel Yöntem)
- * createAppClient kütüphanesindeki hataları bypass eder.
+ * Manuel Farcaster Auth Doğrulama
+ * Kütüphane bağımlılığı olmadan token içindeki imzayı matematiksel olarak doğrular.
  */
 async function verifyFarcasterAuth(req: Request, expectedFid: number) {
   try {
@@ -30,23 +30,23 @@ async function verifyFarcasterAuth(req: Request, expectedFid: number) {
     const token = authHeader.split(" ")[1];
     if (!token) return false;
 
-    // 1. Token'ı parçala (Kütüphane bağımlılığı olmadan)
+    // 1. JWT Token'ı güvenli şekilde decode et
     const payload = decodeJwt(token) as any;
 
-    // 2. Temel Veri Kontrolleri
+    // 2. FID ve Temel Kontroller
     if (!payload || payload.fid !== expectedFid) {
-      console.error("FID Mismatch or No Payload");
+      console.error("Auth: FID Mismatch");
       return false;
     }
 
-    // 3. Zaman Kontrolü (Token süresi dolmuş mu?)
+    // 3. Süre Kontrolü
     const now = Math.floor(Date.now() / 1000);
     if (payload.exp && now > payload.exp) {
-      console.error("Token Expired");
+      console.error("Auth: Token Expired");
       return false;
     }
 
-    // 4. Kriptografik İmza Doğrulaması (Viem ile)
+    // 4. Kriptografik İmza Doğrulaması (Kritik Güvenlik Katmanı)
     const isVerified = await verifyMessage({
       address: payload.address as `0x${string}`,
       message: payload.message,
@@ -55,7 +55,7 @@ async function verifyFarcasterAuth(req: Request, expectedFid: number) {
 
     return isVerified;
   } catch (err) {
-    console.error("Auth System Crash:", err);
+    console.error("Auth System Error:", err);
     return false;
   }
 }
@@ -78,29 +78,38 @@ export async function POST(req: Request) {
 
     const { fid, username, location, text, price, wallet_address } = validation.data;
 
-    // --- MANUEL DOĞRULAMA ---
+    // --- GÜVENLİK KONTROLÜ ---
     const isAuthorized = await verifyFarcasterAuth(req, fid);
     if (!isAuthorized) {
-      return NextResponse.json({ error: "Unauthorized: Invalid identity token" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized Identity" }, { status: 401 });
     }
 
-    // Rate Limit (Günde 3)
+    // Rate Limit: Son 24 saatte en fazla 3 paylaşım
     const { count } = await supabase.from('needs')
       .select('*', { count: 'exact', head: true })
       .eq('fid', fid)
       .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-    if (count !== null && count >= 3) return NextResponse.json({ error: "Daily limit (3)" }, { status: 429 });
+    if (count !== null && count >= 3) {
+      return NextResponse.json({ error: "Daily limit reached (3 needs max)" }, { status: 429 });
+    }
 
     const { error: dbError } = await supabase.from('needs').insert([{
-      fid, username, location, text, price: price.toString(), wallet_address, id: crypto.randomUUID()
+      fid,
+      username,
+      location,
+      text,
+      price: price.toString(),
+      wallet_address,
+      id: crypto.randomUUID()
     }]);
 
     if (dbError) throw dbError;
     return NextResponse.json({ success: true });
+
   } catch (error: any) {
-    console.error("POST Crash:", error);
-    return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+    console.error("POST Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
@@ -109,13 +118,17 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     const fid = searchParams.get('fid');
-    if (!id || !fid) return NextResponse.json({ error: "Missing params" }, { status: 400 });
+    if (!id || !fid) return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
 
-    if (!(await verifyFarcasterAuth(req, Number(fid)))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const isAuthorized = await verifyFarcasterAuth(req, Number(fid));
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Unauthorized Delete Attempt" }, { status: 401 });
     }
 
-    const { error } = await supabase.from('needs').delete().eq('id', id).eq('fid', Number(fid));
+    const { error } = await supabase.from('needs').delete()
+      .eq('id', id)
+      .eq('fid', Number(fid));
+
     if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error: any) {

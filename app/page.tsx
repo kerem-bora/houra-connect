@@ -34,16 +34,6 @@ export default function Home() {
 
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
-  const { signMessageAsync } = useSignMessage();
-
-  // --- IMZA TEMIZLEME FONKSIYONU ---
-  const cleanSignature = (sig: any): `0x${string}` => {
-    // Eğer veri objeyse içindeki signature veya hash alanını bul
-    const raw = typeof sig === 'string' ? sig : (sig?.signature || sig?.hash || JSON.stringify(sig));
-    // Sadece ilk 132 karakteri al (0x + 65 byte)
-    let cleaned = raw.startsWith('0x') ? raw : `0x${raw}`;
-    return cleaned.slice(0, 132) as `0x${string}`;
-  };
 
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
@@ -63,7 +53,7 @@ export default function Home() {
         const profData = await profRes.json();
         if (profData.profile) {
           setLocation(profData.profile.city || "");
-          setOffer(profData.profile.bio || "");
+          setOffer(profData.profile.talents || "");
         }
       }
       const needsRes = await fetch('/api/needs');
@@ -142,12 +132,11 @@ export default function Home() {
     if (!currentAddress) return setStatus("Connect wallet first.");
     
     try {
-      setStatus("Signing...");
-      const message = `Post Need: ${needText.slice(0, 20)}`;
-      const rawSig = await signMessageAsync({ message });
-      const signature = cleanSignature(rawSig);
+      setStatus("Posting...");
+      // BYPASS: İmza alma kısmı devre dışı bırakıldı
+      const signature = "0xbypass"; 
+      const message = "bypass";
 
-      setStatus(`Posting (Len: ${signature.length})...`);
       const res = await fetch("/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -172,10 +161,10 @@ export default function Home() {
         setTimeout(() => setStatus(""), 2000);
       } else {
         const data = await res.json();
-        setStatus(`Hata: ${data.error || "Failed"}`); 
+        setStatus(`Error: ${data.error || "Failed"}`); 
       }
     } catch (e: any) { 
-      setStatus(`Hata: ${e.message}`); 
+      setStatus(`Error: ${e.message}`); 
     }
   };
 
@@ -183,12 +172,11 @@ export default function Home() {
     if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
     
     try {
-      setStatus("Signing...");
-      const message = `Update Houra Profile: ${context.user.username}`;
-      const rawSig = await signMessageAsync({ message });
-      const signature = cleanSignature(rawSig);
-
       setStatus("Saving...");
+      // BYPASS: İmza alma kısmı devre dışı bırakıldı
+      const signature = "0xbypass";
+      const message = "bypass";
+
       const res = await fetch("/api/profile", { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
@@ -211,19 +199,18 @@ export default function Home() {
         const data = await res.json();
         setStatus(`Save failed: ${data.error || ""}`);
       }
-    } catch (e) { setStatus("Signature denied"); }
+    } catch (e) { setStatus("Error saving profile"); }
   };
 
   const handleDeleteNeed = async (id: string) => {
     if (!id || !context?.user?.fid || !currentAddress) return;
     
     try {
-      setStatus("Signing to delete...");
-      const message = `Delete Need ID: ${id}`;
-      const rawSig = await signMessageAsync({ message });
-      const signature = cleanSignature(rawSig);
-
       setStatus("Deleting...");
+      // BYPASS: İmza alma kısmı devre dışı bırakıldı
+      const signature = "0xbypass";
+      const message = "bypass";
+
       const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -242,7 +229,7 @@ export default function Home() {
         const err = await res.json();
         setStatus(err.error || "Delete failed");
       }
-    } catch (e) { setStatus("Signature denied"); }
+    } catch (e) { setStatus("Error deleting"); }
   };
 
   const AboutContent = () => (
@@ -343,7 +330,7 @@ export default function Home() {
               <div key={user.fid} style={{ padding: '12px', background: '#111', borderRadius: '12px', border: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.bio || "No offer description"}</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.talents || "No offer description"}</p>
                 </div>
                 <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
               </div>

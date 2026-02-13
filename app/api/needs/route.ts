@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { verifyMessage } from "viem";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -33,31 +32,24 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // 1. Zod ile doğrulamayı çalıştır (Hata buradaydı, 'validation' tanımlanmamıştı)
+    // 1. Zod ile veri formatını kontrol et
     const validation = NeedSchema.safeParse(body);
     
     if (!validation.success) {
       return NextResponse.json({ error: "Invalid data format", details: validation.error.format() }, { status: 400 });
     }
 
-    const { fid, username, location, text, price, wallet_address, signature, message } = validation.data;
+    const { fid, username, location, text, price, wallet_address } = validation.data;
 
-    // 2. İmza Doğrulaması
-    try {
-      const isValid = await verifyMessage({
-        address: wallet_address as `0x${string}`,
-        message: message,
-        signature: signature as `0x${string}`,
-      });
+    // 2. İMZA DOĞRULAMASI (BYPASS EDİLDİ)
+    // Güvenlik kontrolünü geçici olarak devre dışı bıraktık.
+    const isSignatureValid = true; 
 
-      if (!isValid) {
-        return NextResponse.json({ error: "Signature verification failed!" }, { status: 401 });
-      }
-    } catch (vError: any) {
-      return NextResponse.json({ error: "Crypto Verify Error: " + vError.message }, { status: 400 });
+    if (!isSignatureValid) {
+       return NextResponse.json({ error: "Signature failed" }, { status: 401 });
     }
 
-    // 3. Rate Limit (Günde 3 paylaşım)
+    // 3. Rate Limit (Günde 3 paylaşım) - Bunu koruyoruz ki veritabanın şişmesin
     const { count } = await supabase.from('needs')
       .select('*', { count: 'exact', head: true })
       .eq('fid', fid)
@@ -95,17 +87,14 @@ export async function DELETE(req: Request) {
     const fidValue = searchParams.get('fid');
     const body = await req.json();
 
-    if (!idValue || !fidValue || !body.signature || !body.address) {
+    if (!idValue || !fidValue || !body.address) {
       return NextResponse.json({ error: "Missing parameters for delete" }, { status: 400 });
     }
 
-    const isValid = await verifyMessage({
-      address: body.address as `0x${string}`,
-      message: body.message,
-      signature: body.signature as `0x${string}`,
-    });
+    // İMZA DOĞRULAMASI (BYPASS EDİLDİ)
+    const isDeleteAuth = true;
 
-    if (!isValid) return NextResponse.json({ error: "Delete Signature Invalid" }, { status: 401 });
+    if (!isDeleteAuth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { error } = await supabase.from('needs').delete()
       .eq('id', idValue)

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { z } from "zok";
+import { z } from "zod";
 import { createAppClient } from "@farcaster/auth-client";
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";

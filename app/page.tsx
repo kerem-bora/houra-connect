@@ -53,14 +53,12 @@ export default function Home() {
       const profData = await profRes.json();
       if (profData.profile) {
         setLocation(profData.profile.city || "");
-        setOffer(profData.profile.bio || "");
+        setOffer(profData.profile.talents || profData.profile.bio || "");
       }
       const needsRes = await fetch('/api/needs');
       const needsData = await needsRes.json();
-      // Buradaki verinin doğruluğunu console'dan kontrol edebilirsin
-      console.log("Fetched needs:", needsData.needs);
       setNeeds(needsData.needs || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
   useEffect(() => {
@@ -86,7 +84,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // Search Logic (aynı kalıyor)
+  // Search Logics
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -145,7 +143,6 @@ export default function Home() {
           price: needPrice
         }),
       });
-      const data = await res.json();
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText(""); setNeedLocation("");
@@ -154,132 +151,165 @@ export default function Home() {
         setNeeds(nData.needs || []);
         setTimeout(() => setStatus(""), 2000);
       } else {
+        const data = await res.json();
         setStatus(data.error || "Error");
       }
-    } catch (e) { setStatus("Error"); }
+    } catch (e) { setStatus("Error posting need"); }
   };
 
   const handleDeleteNeed = async (identifier: string) => {
-    if (!identifier || !context?.user?.fid) {
-      setStatus("Error: Missing ID or FID");
-      return;
-    }
-
+    if (!identifier || !context?.user?.fid) return setStatus("Error: Missing ID");
     setStatus("Deleting...");
-    
     try {
-      // API uuid bekliyor, ancak identifier her iki durumda da string olarak gelir
+      // ÖNEMLİ: API'ye uuid olarak gönderiyoruz
       const res = await fetch(`/api/needs?uuid=${identifier}&fid=${context.user.fid}`, {
         method: "DELETE",
       });
-
       const data = await res.json();
-
       if (res.ok) {
         setStatus("Deleted! 🗑️");
-        // Hem id hem uuid ihtimaline karşı filtreleme
-        setNeeds((prev) => prev.filter((n) => (n.uuid !== identifier && n.id !== identifier)));
+        setNeeds(prev => prev.filter(n => (n.uuid !== identifier && n.id?.toString() !== identifier.toString())));
         setTimeout(() => setStatus(""), 2000);
       } else {
         setStatus(`API Error: ${data.error}`);
       }
-    } catch (e) {
-      setStatus("Network error");
-    }
+    } catch (e) { setStatus("Network error"); }
   };
-
-  // Render logic... (Kısalık adına AboutContent ve loading aynı kalıyor)
-  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left', boxSizing: 'border-box' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
-      <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
-        Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based tokens.
-      </p>
+      <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>Houra is a peer-to-peer <strong>Time Economy</strong> platform.</p>
       <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <p>📍 <strong>Profile:</strong> Set your location and what you offer to the community.</p>
-        <p>⏳ <strong>Earn:</strong> Help others with their needs and collect Houra tokens.</p>
-        <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
+        <p>📍 <strong>Profile:</strong> Set your location and offer.</p>
+        <p>⏳ <strong>Earn:</strong> Help others and collect tokens.</p>
+        <p>🛠️ <strong>Post:</strong> Share what you need.</p>
       </div>
-      <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>Got it!</button>
+      <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Got it!</button>
     </div>
   );
 
-  if (!isFarcaster) {
-    return (
-      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
-        <AboutContent />
-      </div>
-    );
-  }
+  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', boxSizing: 'border-box' }}>
       
-      {/* Header ve Diğer Paneller (Kodun ortası aynı kalıyor) */}
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px' }} />
+          <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
         </div>
-        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px' }}>i</button>
+        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>i</button>
       </div>
+      <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
 
       {isAboutOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <AboutContent />
         </div>
       )}
-
-      {/* 1. SEND PANEL (Aynı) */}
-      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
+      
+      {/* 1. SEND PANEL */}
+      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px', boxSizing: 'border-box' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
         {!selectedRecipient ? (
-          <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff' }} />
+          <div style={{ position: 'relative' }}>
+            <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', outline: 'none', boxSizing: 'border-box' }} />
+            {searchResults.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#111', borderRadius: '12px', marginTop: '5px', zIndex: 100, border: '1px solid #333', maxHeight: '150px', overflowY: 'auto' }}>
+                {searchResults.map(user => (
+                  <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>@{user.username}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
             <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
-            <button onClick={() => setSelectedRecipient(null)} style={{ color: '#fff', background: 'none', border: 'none', textDecoration: 'underline' }}>Change</button>
+            <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', textDecoration: 'underline' }}>Change</button>
           </div>
         )}
-        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: '#fff', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
+          <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ width: '50%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none' }} />
+          <span style={{ fontSize: '0.8rem' }}>Bal: {formattedBalance}</span>
+        </div>
+        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: selectedRecipient ? '#fff' : 'rgba(255,255,255,0.3)', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND {sendAmount} HOURA</button>
       </div>
 
-      {/* 5. LATEST NEEDS - KRİTİK DÜZELTME BURADA */}
+      {/* 2. SEARCH FOR OFFERS */}
+      <div style={{ marginBottom: '20px' }}>
+        <h3 style={{ fontSize: '1rem', marginBottom: '10px' }}>Search for Offers</h3>
+        <input placeholder="Search offer..." value={offerQuery} onChange={(e) => setOfferQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff', boxSizing: 'border-box' }} />
+        {offerResults.length > 0 && (
+          <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {offerResults.map(user => (
+              <div key={user.fid} style={{ padding: '12px', background: '#111', borderRadius: '12px', border: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.talents || user.bio || "No offer"}</p>
+                </div>
+                <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 3. ADD YOUR NEED */}
+      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input placeholder="Location" value={needLocation} onChange={(e) => setNeedLocation(e.target.value)} style={{ flex: 1, padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+            <button onClick={() => setNeedLocation("Online")} style={{ padding: '0 15px', background: '#222', color: '#fff', border: '1px solid #333', borderRadius: '10px' }}>Online</button>
+          </div>
+          <textarea placeholder="What do you need?" value={needText} onChange={(e) => setNeedText(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+             <input type="number" value={needPrice} onChange={(e) => setNeedPrice(e.target.value)} style={{ width: '80px', padding: '8px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '8px' }} />
+             <span style={{ fontSize: '0.8rem' }}>Houra</span>
+          </div>
+          <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>POST NEED</button>
+        </div>
+      </details>
+
+      {/* 4. PROFILE SETTINGS */}
+      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+          <input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
+          <textarea placeholder="What do you offer?" value={offer} onChange={(e) => setOffer(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
+          <button onClick={async () => {
+            await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fid: context.user.fid, username: context.user.username, pfp: context.user.pfpUrl, city: location, talents: offer, address: currentAddress }) });
+            setStatus("Profile Saved! ✅");
+            setTimeout(() => setStatus(""), 2000);
+          }} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px' }}>SAVE PROFILE</button>
+        </div>
+      </details>
+
+      {/* 5. LATEST NEEDS */}
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
-        {needs && needs.length > 0 ? needs.map((need: any) => {
-          // Fallback mekanizması: uuid yoksa id kullan
-          const needKey = need.uuid || need.id || Math.random().toString();
-          
-          return (
-            <div key={needKey} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222', boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} H</span>
-                  {Number(context?.user?.fid) === Number(need.fid) && (
-                    <button 
-                      onClick={() => handleDeleteNeed(need.uuid || need.id)} 
-                      style={{ background: '#ff4444', border: 'none', color: '#fff', fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
-              <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-                 <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+        {needs.map((need: any) => (
+          <div key={need.uuid || need.id} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem' }}>⏳ {need.price || "1"} H</span>
+                {Number(context?.user?.fid) === Number(need.fid) && (
+                  <button onClick={() => handleDeleteNeed(need.uuid || need.id)} style={{ background: '#ff4444', border: 'none', color: '#fff', fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}>Delete</button>
+                )}
               </div>
             </div>
-          );
-        }) : (
-          <p style={{ textAlign: 'center', color: '#666' }}>No needs found.</p>
-        )}
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {status && (

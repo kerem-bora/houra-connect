@@ -1,11 +1,7 @@
+export const dynamic = "force-dynamic";
 "use client";
-
-export const dynamic = "force-dynamic"; // Build hatalarını önlemek için kritik
-
-import { useEffect, useState, useCallback } from "react";
 import { useAuthenticate } from '@coinbase/onchainkit/minikit'; 
-import { useReadContract, useAccount } from 'wagmi';
-import { useSendCalls } from 'wagmi/experimental';
+import { useReadContract, useAccount, useSendCalls } from 'wagmi'; // Hepsi ana paketten
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
 // --- CONFIG ---

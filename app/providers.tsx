@@ -1,5 +1,4 @@
 "use client";
-
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
@@ -14,7 +13,6 @@ const config = createConfig({
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>

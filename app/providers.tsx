@@ -1,28 +1,30 @@
 "use client";
 
+import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
+import { coinbaseWallet, injected } from 'wagmi/connectors'; // Modern konnektörler
 
-const config = createConfig({
+const wagmiConfig = createConfig({
   chains: [base],
+  connectors: [
+    coinbaseWallet({ appName: 'Houra', preference: 'smartWalletOnly' }),
+    injected(),
+  ],
   ssr: true,
   transports: {
     [base.id]: http(),
   },
 });
 
-export function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+const queryClient = new QueryClient();
 
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={config}>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-        >
+        <OnchainKitProvider apiKey={""} chain={base}>
           {children}
         </OnchainKitProvider>
       </QueryClientProvider>

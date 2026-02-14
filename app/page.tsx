@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 // OnchainKit'in yeni nesil doğrulama hook'u
 import { useAuthenticate } from '@coinbase/onchainkit/minikit'; 
 import { useReadContract, useAccount } from 'wagmi';
-import { useSendCalls } from 'wagmi/experimental'; 
+import { useSendCalls } from 'wagmi'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
 // --- CONFIG ---

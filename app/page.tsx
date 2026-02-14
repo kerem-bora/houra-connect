@@ -337,64 +337,43 @@ export default function Home() {
 
   };
 
-
 const handleSaveProfile = async () => {
-  // context.user.fid'nin varlığından emin oluyoruz
-  if (!context?.user?.fid || !currentAddress) {
-    setStatus("Hata: Bağlantı eksik");
-    return;
-  }
-  
-  try {
-    setStatus("Kaydediliyor...");
-    
-    const res = await fetch("/api/profile", { 
-      method: "POST", 
-      headers: { 
-        "Content-Type": "application/json",
-        "x-farcaster-fid": context.user.fid.toString() // Header kontrolü için önemli
-      }, 
-      body: JSON.stringify({ 
-        fid: Number(context.user.fid), 
-        username: context.user.username, 
-        city: location, 
-        talents: offer, 
-        address: currentAddress
-      }) 
-    });
-    
-    if (res.ok) {
-      setStatus("Profil Güncellendi! ✅");
-      setTimeout(() => setStatus(""), 2000);
-    } else {
-      const errData = await res.json();
-      setStatus(`Hata: ${errData.error}`);
+    if (!context?.user?.fid || !currentAddress) {
+      setStatus("Error: Connection missing");
+      return;
     }
-  } catch (e) { 
-    setStatus("İstek gönderilemedi"); 
-  }
-};
+    
+    try {
+      setStatus("Saving...");
       
-
+      const res = await fetch("/api/profile", { 
+        method: "POST", 
+        headers: { 
+          "Content-Type": "application/json",
+          "x-farcaster-fid": context.user.fid.toString()
+        }, 
+        body: JSON.stringify({ 
+          fid: Number(context.user.fid), 
+          username: context.user.username, 
+          city: location, 
+          talents: offer, 
+          address: currentAddress
+        }) 
+      });
+      
       if (res.ok) {
-
-        setStatus("Profile Saved! ✅");
-
+        setStatus("Profile Updated! ✅");
         setTimeout(() => setStatus(""), 2000);
-
       } else {
-
-        const data = await res.json();
-
-        setStatus(`Save failed: ${data.error || ""}`);
-
+        const errData = await res.json();
+        setStatus(`Error: ${errData.error || "Failed"}`);
       }
+    } catch (e) { 
+      setStatus("Error saving profile"); 
+    }
+  };      
 
-    } catch (e) { setStatus("Error saving profile"); }
-
-  };
-
-
+  
 
   const handleDeleteNeed = async (id: string) => {
 

@@ -1,16 +1,24 @@
-"use client";
+'use client';
+import { ReactNode } from 'react';
+import { base } from 'viem/chains';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { base } from 'wagmi/chains';
+import '@coinbase/onchainkit/styles.css';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function RootProvider({ children }: { children: ReactNode }) {
   return (
-    <OnchainKitProvider 
-      apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY} 
+    <OnchainKitProvider
+      apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
       chain={base}
-      config={{ 
-        appearance: { 
-          mode: 'auto' 
-        } 
+      config={{
+        appearance: {
+          mode: 'auto',
+        },
+        wallet: {
+          display: 'modal',
+        },
+        miniKit: {
+          enabled: true,
+        },
       }}
     >
       {children}

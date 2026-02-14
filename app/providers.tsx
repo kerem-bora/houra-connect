@@ -22,8 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY} 
           chain={base}
-          // GÜNCELLEME: MiniKit'i aktif etmek ve build hatasını çözmek için bu config şart
-          config={{
+           config={{
             appearance: {
               mode: 'auto',
             },

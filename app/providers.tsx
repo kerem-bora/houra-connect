@@ -20,8 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
           {children}
-        </OnchainKitProvider>
-      </QueryClientProvider>
+        </QueryClientProvider>
     </WagmiProvider>
   );
 }

@@ -263,79 +263,44 @@ export default function Home() {
   }, [sendCalls, refetchBalance, selectedRecipient, sendAmount]);
 
 
-
-  const handleAddNeed = async () => {
-
+const handleAddNeed = async () => {
     if (!needText) return setStatus("Write your need.");
-
     if (!context?.user?.fid) return setStatus("Farcaster login required.");
-
     if (!currentAddress) return setStatus("Connect wallet first.");
-
     
-
     try {
-
       setStatus("Posting...");
-
       const res = await fetch("/api/needs", {
-
         method: "POST",
-
         headers: { 
-
           "Content-Type": "application/json",
-
           "x-farcaster-fid": context.user.fid.toString() 
-
         },
-
         body: JSON.stringify({
-
           fid: context.user.fid,
-
           username: context.user.username,
-
           location: needLocation || "Global",
-
           text: needText,
-
-          wallet_address: currentAddress, 
-
+          wallet_address: currentAddress.toLowerCase(), // Küçük harfe zorla
           price: needPrice.toString(),
-
-    
         }),
-
       });
 
-
-
       if (res.ok) {
-
         setStatus("Need posted! ✅");
-
         setNeedText(""); setNeedLocation("");
-
         const nRes = await fetch('/api/needs');
-
         const nData = await nRes.json();
-
         setNeeds(nData.needs || []);
-
         setTimeout(() => setStatus(""), 2000);
-
       } else {
-
         const data = await res.json();
-
+        // Backend'den gelen "Profile not found" uyarısını burada kullanıcı görecek
         setStatus(`Error: ${data.error || "Failed"}`); 
-
       }
-
     } catch (e: any) { setStatus(`Error: ${e.message}`); }
-
   };
+ 
 
 const handleSaveProfile = async () => {
     if (!context?.user?.fid || !currentAddress) {
@@ -345,7 +310,6 @@ const handleSaveProfile = async () => {
     
     try {
       setStatus("Saving...");
-      
       const res = await fetch("/api/profile", { 
         method: "POST", 
         headers: { 
@@ -357,7 +321,7 @@ const handleSaveProfile = async () => {
           username: context.user.username, 
           city: location, 
           talents: offer, 
-          address: currentAddress
+          address: currentAddress.toLowerCase() // Küçük harfe zorla
         }) 
       });
       
@@ -371,65 +335,35 @@ const handleSaveProfile = async () => {
     } catch (e) { 
       setStatus("Error saving profile"); 
     }
-  };      
+  };  
 
   
-
-  const handleDeleteNeed = async (id: string) => {
-
+const handleDeleteNeed = async (id: string) => {
     if (!id || !context?.user?.fid || !currentAddress) return;
-
     
-
     try {
-
       setStatus("Deleting...");
-
       const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 
-
         method: "DELETE",
-
         headers: { 
-
           "Content-Type": "application/json",
-
           "x-farcaster-fid": context.user.fid.toString() 
-
         },
-
         body: JSON.stringify({
-
-          address: currentAddress,
-
-          safeContext: context // Güvenli context
-
+          address: currentAddress.toLowerCase() // Sadece adres yeterli
         })
-
       });
 
-
-
       if (res.ok) {
-
         setNeeds(prev => prev.filter(n => n.id !== id));
-
         setStatus("Deleted! ✅");
-
         setTimeout(() => setStatus(""), 2000);
-
       } else {
-
         const err = await res.json();
-
         setStatus(err.error || "Delete failed");
-
       }
-
     } catch (e) { setStatus("Error deleting"); }
-
   };
-
-
 
   // --- COMPONENTS ---
 

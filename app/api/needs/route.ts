@@ -7,7 +7,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// --- GÜNCELLENMİŞ ŞEMA (Signature ve Message kaldırıldı) ---
 const NeedSchema = z.object({
   fid: z.number(),
   username: z.string().min(1).max(50).trim(),
@@ -16,14 +15,14 @@ const NeedSchema = z.object({
     .max(100)
     .optional()
     .default("Global")
-    .transform(val => val.trim().replace(/<[^>]*>/g, "")), // HTML temizleme
+    .transform(val => val.trim().replace(/<[^>]*>/g, "")),
   text: z
     .string()
     .min(3)
     .max(280)
-    .transform(val => val.trim().replace(/<[^>]*>/g, "")), // HTML temizleme
-  price: z.union([z.string(), z.number()]).optional().default("1"),
-  wallet_address: z.string().startsWith("0x"),
+    .transform(val => val.trim().replace(/<[^>]*>/g, "")),
+  price: z.coerce.string().default("1"),
+  wallet_address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), 
 });
 
 export async function GET() {
@@ -46,37 +45,52 @@ export async function POST(req: Request) {
     const validation = NeedSchema.safeParse(body);
     
     if (!validation.success) {
-      // Hangi alanın hatalı olduğunu sunucu terminalinde görebilmek için:
-      console.error("Validation Error Details:", validation.error.format());
+      console.error("Validation Error:", validation.error.format());
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
     const { fid, username, location, text, price, wallet_address } = validation.data;
 
-    // --- KİMLİK KONTROLÜ (HEADER VERIFICATION) ---
+    // 1. ADIM: Header FID Kontrolü
     const headerFid = req.headers.get("x-farcaster-fid");
-    if (!headerFid || Number(headerFid) !== Number(fid)) {
-      return NextResponse.json({ error: "Identity mismatch! POST rejected." }, { status: 401 });
+    if (!headerFid || Number(headerFid) !== fid) {
+      return NextResponse.json({ error: "Identity mismatch!" }, { status: 401 });
     }
 
-    // Rate Limit (Günde 3 paylaşım)
+    // 2. ADIM: Zorunlu Profil ve Adres Eşleşme Kontrolü
+    // Bu kısım "üye olmayan" veya "başkasının cüzdanını kullanan" kişileri eler.
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('wallet_address')
+      .eq('fid', fid)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Profile not found. Please create a profile first." }, { status: 403 });
+    }
+
+    if (profile.wallet_address.toLowerCase() !== wallet_address.toLowerCase()) {
+      return NextResponse.json({ error: "Wallet address mismatch with profile!" }, { status: 403 });
+    }
+
+    // 3. ADIM: Rate Limit
     const { count } = await supabase.from('needs')
       .select('*', { count: 'exact', head: true })
       .eq('fid', fid)
       .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
     if (count !== null && count >= 3) {
-      return NextResponse.json({ error: "Daily limit reached (3 needs max)" }, { status: 429 });
+      return NextResponse.json({ error: "Daily limit reached (3 max)" }, { status: 429 });
     }
 
-    // Veritabanına kayıt
+    // 4. ADIM: Kayıt
     const { error: dbError } = await supabase.from('needs').insert([{
       fid, 
       username, 
       location, 
       text, 
-      price: price.toString(), 
-      wallet_address, 
+      price, 
+      wallet_address: wallet_address.toLowerCase(), 
       id: crypto.randomUUID()
     }]);
 
@@ -85,7 +99,7 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Needs POST Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -100,21 +114,35 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    // --- KİMLİK KONTROLÜ (HEADER VERIFICATION) ---
+    // 1. ADIM: Header FID Kontrolü
     const headerFid = req.headers.get("x-farcaster-fid");
     if (!headerFid || Number(headerFid) !== Number(fidValue)) {
-      return NextResponse.json({ error: "Unauthorized delete attempt!" }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { error } = await supabase.from('needs').delete()
+    // 2. ADIM: Sahiplik Kontrolü (DB'deki orijinal kayıt üzerinden)
+    const { data: originalNeed } = await supabase
+      .from('needs')
+      .select('wallet_address')
       .eq('id', idValue)
-      .eq('fid', Number(fidValue))
-      .eq('wallet_address', body.address);
+      .single();
+
+    if (!originalNeed) return NextResponse.json({ error: "Need not found" }, { status: 404 });
+
+    // Cüzdan adresi uyuşmuyorsa silme!
+    if (originalNeed.wallet_address.toLowerCase() !== body.address.toLowerCase()) {
+      return NextResponse.json({ error: "Ownership mismatch!" }, { status: 403 });
+    }
+
+    const { error } = await supabase.from('needs')
+      .delete()
+      .eq('id', idValue)
+      .eq('wallet_address', body.address.toLowerCase());
 
     if (error) throw error;
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }

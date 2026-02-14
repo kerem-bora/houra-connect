@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { sdk } from "@farcaster/frame-sdk"; 
+import { sdk } from "@farcaster/miniapp-sdk"; 
 import { useReadContract, useAccount } from 'wagmi';
 import { useSendCalls } from 'wagmi'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
-// 1. ZORUNLU DEĞİŞİKLİK: React 19/OnchainKit 1.x.x uyumlu import yolu
 import { useAuthenticate } from '@coinbase/onchainkit/minikit';
 
+export const dynamic = "force-dynamic";
 const HOURA_TOKEN_ADDRESS = "0x463eF2dA068790785007571915419695D9BDE7C6"; 
 const TOKEN_ABI = [
   { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: 'balance', type: 'uint256' }] },

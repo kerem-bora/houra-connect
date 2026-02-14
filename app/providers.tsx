@@ -1,5 +1,4 @@
 "use client";
-
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
@@ -23,6 +22,12 @@ export function Providers({ children }: { children: ReactNode }) {
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY} 
           chain={base}
+          // GÜNCELLEME: MiniKit'i aktif etmek ve build hatasını çözmek için bu config şart
+          config={{
+            appearance: {
+              mode: 'auto',
+            },
+          }}
         >
           {children}
         </OnchainKitProvider>

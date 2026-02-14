@@ -1,7 +1,8 @@
 "use client";
 
+export const dynamic = "force-dynamic"; // Build hatalarını önlemek için kritik
+
 import { useEffect, useState, useCallback } from "react";
-// OnchainKit'in yeni nesil doğrulama hook'u
 import { useAuthenticate } from '@coinbase/onchainkit/minikit'; 
 import { useReadContract, useAccount } from 'wagmi';
 import { useSendCalls } from 'wagmi'; 
@@ -15,8 +16,10 @@ const TOKEN_ABI = [
 ] as const;
 
 export default function Home() {
-  // --- ONCHAINKIT AUTH ---
+  const [mounted, setMounted] = useState(false);
   const { user: authUser, authenticate } = useAuthenticate();
+  const { address: currentAddress } = useAccount();
+  const { sendCalls } = useSendCalls();
 
   // --- STATES ---
   const [location, setLocation] = useState("");
@@ -34,8 +37,8 @@ export default function Home() {
   const [needPrice, setNeedPrice] = useState("1");
   const [needs, setNeeds] = useState<any[]>([]);
 
-  const { address: currentAddress } = useAccount();
-  const { sendCalls } = useSendCalls();
+  // Hydration hatasını önlemek için mounted kontrolü
+  useEffect(() => { setMounted(true); }, []);
 
   // --- DATA FETCHING ---
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
@@ -65,17 +68,14 @@ export default function Home() {
     } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
-  // --- INITIALIZATION ---
   useEffect(() => {
-    // authUser varsa otomatik yükle, yoksa sadece genel verileri getir
-    if (authUser?.fid) {
-      fetchAllData(Number(authUser.fid));
-    } else {
-      fetchAllData();
+    if (mounted) {
+      if (authUser?.fid) fetchAllData(Number(authUser.fid));
+      else fetchAllData();
     }
-  }, [authUser, fetchAllData]);
+  }, [authUser, fetchAllData, mounted]);
 
-  // --- SEARCH LOGIC (Existing) ---
+  // --- SEARCH LOGIC ---
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -120,15 +120,12 @@ export default function Home() {
     });
   }, [sendCalls, refetchBalance, selectedRecipient, sendAmount]);
 
-  // GÜVENLİ POST İŞLEMİ
   const handleAddNeed = async () => {
     if (!needText) return setStatus("Write your need.");
-    
     try {
       setStatus("Authenticating...");
-      // Her kritik işlemde güncel imza alıyoruz
       const auth = authUser || await authenticate();
-      if (!auth) return setStatus("Authentication required.");
+      if (!auth) return setStatus("Authentication failed.");
 
       setStatus("Posting...");
       const res = await fetch("/api/needs", {
@@ -145,84 +142,35 @@ export default function Home() {
           price: needPrice.toString(),
         }),
       });
-
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText(""); setNeedLocation("");
         fetchAllData();
         setTimeout(() => setStatus(""), 2000);
-      } else {
-        const data = await res.json();
-        setStatus(`Error: ${data.error || "Failed"}`); 
-      }
+      } else setStatus("Post failed.");
     } catch (e: any) { setStatus(`Error: ${e.message}`); }
   };
 
-  // GÜVENLİ PROFİL KAYDI
   const handleSaveProfile = async () => {
     try {
       setStatus("Authenticating...");
       const auth = authUser || await authenticate();
-      if (!auth) return setStatus("Authentication required.");
-
-      setStatus("Saving...");
+      if (!auth) return setStatus("Login required.");
       const res = await fetch("/api/profile", { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
         body: JSON.stringify({ 
-          fid: auth.fid, 
-          message: auth.message,
-          signature: auth.signature,
-          username: auth.username, 
-          city: location, 
-          talents: offer, 
-          address: currentAddress
+          fid: auth.fid, message: auth.message, signature: auth.signature,
+          username: auth.username, city: location, talents: offer, address: currentAddress
         }) 
       });
-      
-      if (res.ok) {
-        setStatus("Profile Updated! ✅");
-        setTimeout(() => setStatus(""), 2000);
-      } else {
-        const errData = await res.json();
-        setStatus(`Error: ${errData.error || "Failed"}`);
-      }
-    } catch (e) { 
-      setStatus("Error saving profile"); 
-    }
-  };      
-
-  // GÜVENLİ SİLME İŞLEMİ
-  const handleDeleteNeed = async (id: string) => {
-    try {
-      setStatus("Authenticating...");
-      const auth = authUser || await authenticate();
-      if (!auth) return;
-
-      setStatus("Deleting...");
-      const res = await fetch(`/api/needs?id=${id}`, { 
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fid: auth.fid,
-          message: auth.message,
-          signature: auth.signature
-        })
-      });
-
-      if (res.ok) {
-        setNeeds(prev => prev.filter(n => n.id !== id));
-        setStatus("Deleted! ✅");
-        setTimeout(() => setStatus(""), 2000);
-      } else {
-        const err = await res.json();
-        setStatus(err.error || "Delete failed");
-      }
-    } catch (e) { setStatus("Error deleting"); }
+      if (res.ok) setStatus("Profile Updated! ✅");
+      setTimeout(() => setStatus(""), 2000);
+    } catch (e) { setStatus("Error saving profile"); }
   };
 
-  // --- RENDER ---
-  // authUser yoksa login ekranı gösterilebilir. Şimdilik arayüzü koruyorum.
+  if (!mounted) return null; // Sunucu tarafında renderı engelle
+
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       {/* HEADER */}
@@ -238,11 +186,20 @@ export default function Home() {
         )}
       </div>
 
-      {/* SEND PANEL (Kısaltıldı) */}
+      {/* SEND PANEL */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
         {!selectedRecipient ? (
-          <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff' }} />
+          <div style={{ position: 'relative' }}>
+            <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', outline: 'none' }} />
+            {searchResults.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#111', borderRadius: '12px', zIndex: 100, border: '1px solid #333' }}>
+                {searchResults.map(user => (
+                  <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); }} style={{ padding: '12px', cursor: 'pointer', borderBottom: '1px solid #222' }}>@{user.username}</div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '12px' }}>
             <span>@{selectedRecipient.username}</span>
@@ -250,13 +207,24 @@ export default function Home() {
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
-          <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none', width: '50%' }} />
+          <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', width: '50%' }} />
           <span>Bal: {formattedBalance}</span>
         </div>
-        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: '#fff', color: '#000', fontWeight: 'bold', border: 'none', marginTop: '10px' }}>SEND</button>
+        <button onClick={handleTransfer} disabled={!selectedRecipient} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: '#fff', color: '#000', fontWeight: 'bold', marginTop: '10px', border: 'none' }}>SEND</button>
       </div>
 
-      {/* ACTIONS (Add Need & Profile) */}
+      {/* SEARCH OFFERS */}
+      <div style={{ marginBottom: '20px' }}>
+        <input placeholder="Search offers..." value={offerQuery} onChange={(e) => setOfferQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff' }} />
+        {offerResults.map(user => (
+          <div key={user.fid} style={{ padding: '12px', background: '#111', borderRadius: '12px', marginTop: '8px', border: '1px solid #222' }}>
+            <p style={{ margin: 0, fontWeight: 'bold' }}>@{user.username}</p>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city} • {user.talents}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ACTIONS */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <details style={{ background: '#111', padding: '12px', borderRadius: '15px' }}>
           <summary style={{ cursor: 'pointer', color: '#9ca3af' }}>➕ Add Your Need</summary>
@@ -266,7 +234,6 @@ export default function Home() {
              <button onClick={handleAddNeed} style={{ padding: '12px', background: '#fff', color: '#000', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>POST</button>
           </div>
         </details>
-
         <details style={{ background: '#111', padding: '12px', borderRadius: '15px' }}>
           <summary style={{ cursor: 'pointer', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
@@ -284,9 +251,6 @@ export default function Home() {
           <div key={need.id} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
-              {authUser?.fid && Number(need.fid) === Number(authUser.fid) && (
-                <button onClick={() => handleDeleteNeed(need.id)} style={{ color: '#ff4444', background: 'none', border: 'none', textDecoration: 'underline', fontSize: '0.7rem' }}>Delete</button>
-              )}
             </div>
             <p style={{ color: '#ccc', fontSize: '0.9rem' }}>{need.text}</p>
             <span style={{ fontSize: '0.75rem', color: '#2563eb' }}>⏳ {need.price} Houra • 📍 {need.location}</span>
@@ -295,7 +259,7 @@ export default function Home() {
       </div>
 
       {status && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 1000 }}>
           {status}
         </div>
       )}

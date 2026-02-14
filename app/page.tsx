@@ -5,10 +5,9 @@ import { sdk } from "@farcaster/frame-sdk";
 import { useReadContract, useAccount } from 'wagmi';
 import { useSendCalls } from 'wagmi/experimental'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
-// 1. GÜVENLİK: OnchainKit MiniKit hook'unu içe aktarıyoruz
+// 1. ZORUNLU DEĞİŞİKLİK: React 19/OnchainKit 1.x.x uyumlu import yolu
 import { useAuthenticate } from '@coinbase/onchainkit/minikit';
 
-// --- CONFIG ---
 const HOURA_TOKEN_ADDRESS = "0x463eF2dA068790785007571915419695D9BDE7C6"; 
 const TOKEN_ABI = [
   { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: 'balance', type: 'uint256' }] },
@@ -16,7 +15,6 @@ const TOKEN_ABI = [
 ] as const;
 
 export default function Home() {
-  // --- STATES ---
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [isFarcaster, setIsFarcaster] = useState(false);
   const [context, setContext] = useState<any>(null);
@@ -35,20 +33,18 @@ export default function Home() {
   const [needPrice, setNeedPrice] = useState("1");
   const [needs, setNeeds] = useState<any[]>([]);
 
-  // --- AUTH STATE ---
-  // 1. GÜVENLİK: Authenticate hook'unu tanımlıyoruz
+  // AUTH STATE
   const { authenticate } = useAuthenticate();
   const [authFid, setAuthFid] = useState<number | null>(null);
 
   const { address: currentAddress } = useAccount();
   const { sendCalls } = useSendCalls();
 
-  // --- AUTH HANDLER ---
   const handleSignIn = async () => {
     try {
       setStatus("Signing in...");
       const response = await authenticate();
-      // response içinde fid, message ve signature döner.
+      // response nesnesi fid, message ve signature içerir
       if (response && response.fid) {
         setAuthFid(Number(response.fid));
         setStatus("Authenticated! ✅");
@@ -60,7 +56,6 @@ export default function Home() {
     }
   };
 
-  // --- DATA FETCHING ---
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
     address: HOURA_TOKEN_ADDRESS as `0x${string}`,
     abi: TOKEN_ABI,
@@ -88,13 +83,12 @@ export default function Home() {
     } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
-  // --- SDK INIT ---
   useEffect(() => {
     const init = async () => {
       try {
         const ctx = await sdk.context;
+        setContext(ctx); // Context her durumda set edilmeli
         if (ctx?.user?.fid) {
-          setContext(ctx);
           setIsFarcaster(true);
           await fetchAllData(ctx.user.fid);
         } else {
@@ -110,7 +104,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // --- SEARCH LOGIC (Değişmedi) ---
+  // SEARCH LOGIC
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -133,7 +127,6 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [offerQuery]);
 
-  // --- HANDLERS (Transfer, Add, Save, Delete - Değişmedi) ---
   const handleTransfer = useCallback(async () => {
     if (!selectedRecipient?.wallet_address) return setStatus("Select recipient");
     sendCalls({
@@ -255,7 +248,6 @@ export default function Home() {
     } catch (e) { setStatus("Error deleting"); }
   };
 
-  // --- COMPONENTS ---
   const AboutContent = () => (
     <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
@@ -286,7 +278,6 @@ export default function Home() {
     </div>
   );
 
-  // --- RENDER ---
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
   if (!isFarcaster) {
@@ -310,13 +301,13 @@ export default function Home() {
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '15px', marginLeft: '52px' }}>Time Economy</p>
 
-      {/* 2. GÜVENLİK: Uygulamanın en üstüne Sign In butonu ekliyoruz */}
+      {/* SIGN IN BUTTON */}
       {!authFid ? (
         <button 
           onClick={handleSignIn}
           style={{ width: '100%', padding: '14px', background: '#0052FF', color: '#fff', borderRadius: '16px', fontWeight: 'bold', marginBottom: '20px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,82,255,0.3)' }}
         >
-          🛡️ Sign In with Farcaster
+          🛡️ Sign In
         </button>
       ) : (
         <div style={{ background: 'rgba(74, 222, 128, 0.1)', border: '1px solid #4ade80', padding: '10px', borderRadius: '12px', textAlign: 'center', color: '#4ade80', fontSize: '0.85rem', marginBottom: '20px' }}>
@@ -329,9 +320,6 @@ export default function Home() {
           <AboutContent />
         </div>
       )}
-      
-      {/* --- PANELS (Send, Search, Add, Profile, Latest) --- */}
-      {/* ... (Buradaki kodların hepsi aynı kalıyor) ... */}
       
       {/* 1. SEND PANEL */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
@@ -434,7 +422,7 @@ export default function Home() {
 
       <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy © 2026</p>
 
-      {/* 2. GÜVENLİK: Sayfanın en altına doğrulanmış FID bilgisini yazıyoruz */}
+      {/* FID STATUS FOOTER */}
       <div style={{ padding: '10px', borderTop: '1px solid #222', marginTop: '20px', textAlign: 'center' }}>
           <p style={{ fontSize: '0.65rem', color: '#555' }}>
             {authFid 

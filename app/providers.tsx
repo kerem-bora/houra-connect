@@ -1,17 +1,19 @@
 "use client";
-
-import { MiniKitProvider } from '@coinbase/onchainkit/minikit';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { OnchainKitProvider } from '@coinbase/onchainkit';
+import { base } from 'wagmi/chains';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <MiniKitProvider>
-        {children}
-      </MiniKitProvider>
-    </QueryClientProvider>
+    <OnchainKitProvider 
+      apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY} 
+      chain={base}
+      config={{ 
+        appearance: { 
+          mode: 'auto' 
+        } 
+      }}
+    >
+      {children}
+    </OnchainKitProvider>
   );
 }

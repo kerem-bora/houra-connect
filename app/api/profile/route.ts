@@ -46,8 +46,7 @@ export async function POST(req: Request) {
         username: username,
         city: city || "Global",
         bio: talents || "",
-        wallet_address: address, // Adresi de kaydediyoruz ki silme işlemlerinde check edebilelim
-        updated_at: new Date().toISOString()
+        wallet_address: address, 
       }, { onConflict: 'fid' });
 
     if (dbError) throw dbError;

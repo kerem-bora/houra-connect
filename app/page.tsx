@@ -292,7 +292,7 @@ export default function Home() {
 
         body: JSON.stringify({
 
-          fid: Number(context.user.fid),
+          fid: context.user.fid,
 
           username: context.user.username,
 
@@ -304,8 +304,7 @@ export default function Home() {
 
           price: needPrice.toString(),
 
-          safeContext: context // Güvenli context
-
+    
         }),
 
       });
@@ -339,48 +338,40 @@ export default function Home() {
   };
 
 
+   const handleSaveProfile = async () => {
+  // context.user.fid'nin varlığından emin oluyoruz
 
-  const handleSaveProfile = async () => {
-
-    if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
-
+   if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
+  
+  try {
+    setStatus("Kaydediliyor...");
     
-
-    try {
-
-      setStatus("Saving...");
-
-      const res = await fetch("/api/profile", { 
-
-        method: "POST", 
-
-        headers: { 
-
-          "Content-Type": "application/json",
-
-          "x-farcaster-fid": context.user.fid.toString(), 
-
-        }, 
-
-        body: JSON.stringify({ 
-
-          fid: context.user.fid, 
-
-          username: context.user.username, 
-
-          pfp: context.user.pfpUrl, 
-
-          city: location, 
-
-          talents: offer, 
-
-          address: currentAddress,
-
-          safeContext: context // Güvenli context
-
-        }) 
-
-      });
+    const res = await fetch("/api/profile", { 
+      method: "POST", 
+      headers: { 
+        "Content-Type": "application/json",
+        "x-farcaster-fid": context.user.fid.toString() // Header kontrolü için önemli
+      }, 
+      body: JSON.stringify({ 
+        fid: Number(context.user.fid), 
+        username: context.user.username, 
+        city: location, 
+        talents: offer, 
+        address: currentAddress
+      }) 
+    });
+    
+    if (res.ok) {
+      setStatus("Profil Güncellendi! ✅");
+      setTimeout(() => setStatus(""), 2000);
+    } else {
+      const errData = await res.json();
+      setStatus(`Hata: ${errData.error}`);
+    }
+  } catch (e) { 
+    setStatus("İstek gönderilemedi"); 
+  }
+};
 
       
 

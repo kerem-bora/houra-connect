@@ -1,25 +1,17 @@
 "use client";
-import { OnchainKitProvider } from '@coinbase/onchainkit';
+
+import { MiniKitProvider } from '@coinbase/onchainkit/minikit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
-import { WagmiProvider, createConfig, http } from 'wagmi';
-import { base } from 'wagmi/chains';
+import { useState } from 'react';
 
-const config = createConfig({
-  chains: [base],
-  ssr: true,
-  transports: { [base.id]: http() },
-});
-
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider chain={base}>
-          {children}
-        </OnchainKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <MiniKitProvider>
+        {children}
+      </MiniKitProvider>
+    </QueryClientProvider>
   );
 }

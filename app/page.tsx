@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic"; // Build hatalarını önlemek için kri
 import { useEffect, useState, useCallback } from "react";
 import { useAuthenticate } from '@coinbase/onchainkit/minikit'; 
 import { useReadContract, useAccount } from 'wagmi';
-import { useSendCalls } from '@coinbase/onchainkit/transaction';
+import { useSendCalls } from 'wagmi';
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
 // --- CONFIG ---

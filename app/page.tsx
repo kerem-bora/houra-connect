@@ -338,10 +338,12 @@ export default function Home() {
   };
 
 
-   const handleSaveProfile = async () => {
+const handleSaveProfile = async () => {
   // context.user.fid'nin varlığından emin oluyoruz
-
-   if (!context?.user?.fid || !currentAddress) return setStatus("Connect & Login first");
+  if (!context?.user?.fid || !currentAddress) {
+    setStatus("Hata: Bağlantı eksik");
+    return;
+  }
   
   try {
     setStatus("Kaydediliyor...");
@@ -372,7 +374,6 @@ export default function Home() {
     setStatus("İstek gönderilemedi"); 
   }
 };
-
       
 
       if (res.ok) {

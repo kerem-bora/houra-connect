@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { sdk } from "@farcaster/miniapp-sdk"; 
 import { useReadContract, useAccount } from 'wagmi';
-import { useSendCalls } from 'wagmi'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 import { useAuthenticate } from '@coinbase/onchainkit/minikit';
 

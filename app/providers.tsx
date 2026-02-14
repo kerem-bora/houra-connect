@@ -20,12 +20,13 @@ export function Providers({ children }: { children: ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <OnchainKitProvider
-          apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY} 
+          apiKey="pzrnQ3H4MpjsKXUCTazE2lDeDrk7tj9E" 
           chain={base}
            config={{
             appearance: {
               mode: 'auto',
             },
+             paymaster: "",
           }}
         >
           {children}

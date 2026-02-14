@@ -24,7 +24,6 @@ const ProfileSchema = z.object({
   address: z.string().min(1),
   token: z.string().optional(), 
 });
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();

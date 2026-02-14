@@ -9,12 +9,19 @@ const supabase = createClient(
 
 const ProfileSchema = z.object({
   fid: z.number(),
-  username: z.string().min(1),
+  username: z.string().min(1).trim(),
   pfp: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
-  talents: z.string().optional().nullable(),
+  city: z
+    .string()
+    .optional()
+    .nullable()
+    .transform(val => val?.trim().replace(/<[^>]*>/g, "") || null),
+  talents: z
+    .string()
+    .optional()
+    .nullable()
+    .transform(val => val?.trim().replace(/<[^>]*>/g, "") || null),
   address: z.string().min(1),
-  // Şimdilik signIn hata verdiği için bunu opsiyonel yapıyoruz
   token: z.string().optional(), 
 });
 

@@ -10,9 +10,18 @@ const supabase = createClient(
 // --- GÜNCELLENMİŞ ŞEMA (Signature ve Message kaldırıldı) ---
 const NeedSchema = z.object({
   fid: z.number(),
-  username: z.string().min(1).max(50),
-  location: z.string().max(100).optional().default("Global"),
-  text: z.string().min(3).max(280),
+  username: z.string().min(1).max(50).trim(),
+  location: z
+    .string()
+    .max(100)
+    .optional()
+    .default("Global")
+    .transform(val => val.trim().replace(/<[^>]*>/g, "")), // HTML temizleme
+  text: z
+    .string()
+    .min(3)
+    .max(280)
+    .transform(val => val.trim().replace(/<[^>]*>/g, "")), // HTML temizleme
   price: z.union([z.string(), z.number()]).optional().default("1"),
   wallet_address: z.string().startsWith("0x"),
 });

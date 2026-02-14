@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { sdk } from "@farcaster/frame-sdk"; 
 import { useReadContract, useAccount } from 'wagmi';
-import { useSendCalls } from 'wagmi/experimental'; 
+import { useSendCalls } from 'wagmi'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 // 1. ZORUNLU DEĞİŞİKLİK: React 19/OnchainKit 1.x.x uyumlu import yolu
 import { useAuthenticate } from '@coinbase/onchainkit/minikit';

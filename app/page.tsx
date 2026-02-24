@@ -410,9 +410,9 @@ const handleDeleteNeed = async (id: string) => {
       </p>
 
       {isFarcaster && (
-<hr>
-        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
+        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+<hr>
 <p><strong>To Join Houra:</strong></p>
 <p>1. Create your Base/Farcaster wallet.</p>
 <p>2. Register by <strong>saving your location and what you offer</strong>.</p>

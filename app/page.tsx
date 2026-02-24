@@ -394,9 +394,9 @@ const handleDeleteNeed = async (id: string) => {
     )}
 
     <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
-      <Link href="/about" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
-  Read more about Houra.
-</Link>
+     Read more about <Link href="https://en.wikipedia.org/wiki/Time-based_currency" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
+  Time-based currencies
+</Link>.
     </p>
 
     {isFarcaster && (

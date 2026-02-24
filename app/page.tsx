@@ -391,15 +391,14 @@ const handleDeleteNeed = async (id: string) => {
 
       {!isFarcaster && (
 
-        <div style={{ background: 'rgba(37, 99, 235, 0.1)', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', marginBottom: '15px' }}>
+        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
-<p style={{ margin: 0, fontSize: '0.85rem', color: '#fff', textAlign: 'center' }}>
-  <strong>To Join Houra:</strong><br />
-  1. Download the <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}> Base app</a> .<br />
-  2. Create your wallet.<br />
-  3. Search for <strong>"Houra"</strong> in the Base App and open it.<br />
-  4. Register by <strong>saving your location and what you offer</strong>.
-</p>
+<p><strong>To Join Houra:</strong></p>
+<p>1. Download the <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}> Base app</a> .</p>
+<p>2. Create your wallet.</p>
+<p>3. Search for <strong>"Houra"</strong> in the Base App and open it.</p>
+<p>4. Register by <strong>saving your location and what you offer</strong>.</p>
+
         </div>
 
       )}

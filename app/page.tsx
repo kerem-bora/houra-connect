@@ -367,67 +367,49 @@ const handleDeleteNeed = async (id: string) => {
 
   // --- COMPONENTS ---
 
-  const AboutContent = () => (
-
-    <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
-
-      <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
-
-      <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
-
-        Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based tokens.
-
-      </p>
-
-      <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
-        <p>📍 <strong>Profile:</strong> Set your location and what you offer to the community.</p>
-
-        <p>⏳ <strong>Earn:</strong> Help others with their needs and collect Houra tokens.</p>
-
-        <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
-
-      </div>
-
-      {!isFarcaster && (
-<hr>
-        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
-<p><strong>To Join Houra:</strong></p>
-<p>1. Download the <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}> Base app</a> .</p>
-<p>2. Create your wallet.</p>
-<p>3. Search for <strong>"Houra"</strong> in the Base App and open it.</p>
-<p>4. Register by <strong>saving your location and what you offer</strong>.</p>
-
-        </div>
-
-      )}
-
-      <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
-
-        Learn more about <a href="https://en.wikipedia.org/wiki/Time-based_currency" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>Time-based Currencies</a>
-
-      </p>
-
-      {isFarcaster && (
-
-<hr>
-<p><strong>To Join Houra:</strong></p>
-<p>1. Create your Base/Farcaster wallet.</p>
-<p>2. Register by <strong>saving your location and what you offer</strong>.</p>
-
-        </div>
-
-        <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>
-
-          Got it!
-
-        </button>
-
-      )}
-
+ const AboutContent = () => (
+  <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
+    <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
+    <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
+      Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based tokens.
+    </p>
+    <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <p>📍 <strong>Profile:</strong> Set your location and what you offer to the community.</p>
+      <p>⏳ <strong>Earn:</strong> Help others with their needs and collect Houra tokens.</p>
+      <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
     </div>
 
+    {!isFarcaster && (
+      <>
+        <hr style={{ borderColor: '#222' }} />
+        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <p><strong>To Join Houra:</strong></p>
+          <p>1. Download the <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}> Base app</a> .</p>
+          <p>2. Create your wallet.</p>
+          <p>3. Search for <strong>"Houra"</strong> in the Base App and open it.</p>
+          <p>4. Register by <strong>saving your location and what you offer</strong>.</p>
+        </div>
+      </>
+    )}
+
+    <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
+      Learn more about <a href="https://en.wikipedia.org/wiki/Time-based_currency" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>Time-based Currencies</a>
+    </p>
+
+    {isFarcaster && (
+      <>
+        <hr style={{ borderColor: '#222' }} />
+        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <p><strong>To Join Houra:</strong></p>
+          <p>1. Create your Base/Farcaster wallet.</p>
+          <p>2. Register by <strong>saving your location and what you offer</strong>.</p>
+        </div>
+        <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>
+          Got it!
+        </button>
+      </>
+    )}
+  </div>
   );
 
 

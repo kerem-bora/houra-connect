@@ -394,7 +394,7 @@ const handleDeleteNeed = async (id: string) => {
     )}
 
     <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
-      <Link href="app/about" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
+      <Link href="/about" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
   Read more about Houra.
 </Link>
     </p>

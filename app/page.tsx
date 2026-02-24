@@ -265,7 +265,7 @@ export default function Home() {
 
 const handleAddNeed = async () => {
     if (!needText) return setStatus("Write your need.");
-    if (!context?.user?.fid) return setStatus("Farcaster login required.");
+    if (!context?.user?.fid) return setStatus("Base or Farcaster login required.");
     if (!currentAddress) return setStatus("Connect wallet first.");
     
     try {
@@ -393,14 +393,13 @@ const handleDeleteNeed = async (id: string) => {
 
         <div style={{ background: 'rgba(37, 99, 235, 0.1)', padding: '15px', borderRadius: '12px', border: '1px solid #2563eb', marginBottom: '15px' }}>
 
-          <p style={{ margin: 0, fontSize: '0.85rem', color: '#fff' }}>
-
-            The Houra app currently only works in the 
-
-            <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}> Base app</a>
-
-          </p>
-
+<p style={{ margin: 0, fontSize: '0.85rem', color: '#fff', textAlign: 'center' }}>
+  <strong>To Join Houra:</strong><br />
+  1. Download the <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}> Base app</a> .<br />
+  2. Create your wallet.<br />
+  3. Search for <strong>"Houra"</strong> in the Base App and open it.<br />
+  4. Register by <strong>saving your location and what you offer</strong>.
+</p>
         </div>
 
       )}
@@ -631,7 +630,20 @@ const handleDeleteNeed = async (id: string) => {
 
           <textarea placeholder="What do you offer?" value={offer} onChange={(e) => setOffer(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
 
-          <button onClick={handleSaveProfile} style={{ padding: '12px', background: '#333', color: '#fff', fontWeight: 'bold', borderRadius: '10px', border: 'none' }}>SAVE PROFILE</button>
+          <button 
+  onClick={handleSaveProfile} 
+  disabled={!currentAddress}
+  style={{ 
+    padding: '12px', 
+    background: currentAddress ? '#333' : '#550000', // Cüzdan yoksa kırmızımsı/pasif
+    color: '#fff', 
+    fontWeight: 'bold', 
+    borderRadius: '10px', 
+    border: 'none' 
+  }}
+>
+  {currentAddress ? "SAVE PROFILE" : "Please Connect Base/Farcaster Wallet First"}
+</button>
 
         </div>
 

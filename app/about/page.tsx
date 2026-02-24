@@ -2,13 +2,13 @@ import React from 'react';
 
 const AboutHoura = () => {
   return (
-    <div className="min-h-screen bg-[#f8fafc] px-6 py-16 font-sans text-[#0f172a] antialiased">
+    <div className="min-h-screen bg-[#fcfcfc] px-6 py-20 font-sans text-[#0f172a] antialiased">
       <div className="max-w-2xl mx-auto space-y-12">
         
         {/* Header */}
         <header>
-          <h1 className="font-bold">Houra</h1>
-          <p className="text-[#334155] mt-1">
+          <p><strong>Houra</strong></p>
+          <p className="text-slate-500 mt-1 text-sm">
             Redefining value through time.
           </p>
         </header>
@@ -24,7 +24,7 @@ const AboutHoura = () => {
 
         {/* Time Banks */}
         <section>
-          <h2 className="font-bold mb-2">What are Time Banks?</h2>
+          <p className="mb-2"><strong>What are Time Banks?</strong></p>
           <p className="leading-relaxed mb-4">
             A Time Bank is a system where services are exchanged using "units of time." 
             At its core lie reciprocity and equality: one hour of any participant's 
@@ -34,7 +34,7 @@ const AboutHoura = () => {
             href="https://en.wikipedia.org/wiki/Time-based_currency" 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="text-blue-700 hover:text-blue-900 underline text-sm"
+            className="text-slate-900 underline text-xs font-medium uppercase tracking-wider"
           >
             Learn more about Time-based Currencies
           </a>
@@ -42,32 +42,32 @@ const AboutHoura = () => {
 
         {/* Blockchain Section */}
         <section className="pt-8 border-t border-slate-200">
-          <h2 className="font-bold mb-4">How Blockchain Can Help</h2>
+          <p className="mb-6"><strong>How Blockchain Can Help</strong></p>
           <div className="space-y-4">
-            <p><span className="font-bold">Data Management:</span> Time exchanges can be recorded automatically through smart contracts.</p>
-            <p><span className="font-bold">Transparency:</span> Conducting transactions on an open network can enhance the system's reliability.</p>
-            <p><span className="font-bold">Security:</span> The time credits earned by users can be protected in a digital environment.</p>
+            <p><strong>Data Management:</strong> Time exchanges can be recorded automatically through smart contracts.</p>
+            <p><strong>Transparency:</strong> Conducting transactions on an open network can enhance the system's reliability.</p>
+            <p><strong>Security:</strong> The time credits earned by users can be protected in a digital environment.</p>
           </div>
         </section>
 
         {/* Roadmap */}
         <section className="pt-8 border-t border-slate-200">
-          <h2 className="font-bold mb-4">2026 Roadmap</h2>
-          <div className="space-y-6">
+          <p className="mb-6"><strong>2026 Roadmap</strong></p>
+          <div className="space-y-8">
             <div>
-              <h3 className="font-bold">Distribution Protocol</h3>
-              <p className="text-sm mt-1">We aim to implement a central bank structure that establishes a fair economic balance.</p>
+              <p><strong>Distribution Protocol</strong></p>
+              <p className="text-sm text-slate-500 mt-1">Establishing a fair economic balance through token distribution rules.</p>
             </div>
             <div>
-              <h3 className="font-bold">Standalone Application</h3>
-              <p className="text-sm mt-1">We plan to transition our system into a standalone mobile application for a specialized experience.</p>
+              <p><strong>Standalone Application</strong></p>
+              <p className="text-sm text-slate-500 mt-1">Transitioning into a dedicated mobile application for a specialized experience.</p>
             </div>
           </div>
         </section>
 
         {/* Footer */}
-        <footer className="pt-12 text-xs text-[#64748b] border-t border-slate-200">
-          Houra Community
+        <footer className="pt-12 text-[10px] text-slate-400 border-t border-slate-100 tracking-widest uppercase">
+          © 2026 Houra Project. All rights reserved.
         </footer>
       </div>
     </div>

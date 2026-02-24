@@ -1,6 +1,7 @@
 "use client";
 
 
+import Link from "next/link";
 
 import { useEffect, useState, useCallback } from "react";
 
@@ -393,7 +394,9 @@ const handleDeleteNeed = async (id: string) => {
     )}
 
     <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
-      Learn more about <a href="https://en.wikipedia.org/wiki/Time-based_currency" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>Time-based Currencies</a>
+      Learn more about <Link href="/about" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
+  Houra
+</Link>
     </p>
 
     {isFarcaster && (

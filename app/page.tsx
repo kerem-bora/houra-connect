@@ -26,23 +26,19 @@ export default function Home() {
   const [sendAmount, setSendAmount] = useState("1");
   
   // Arama State'leri
-  const [searchQuery, setSearchQuery] = useState(""); // Transfer için
+  const [searchQuery, setSearchQuery] = useState(""); 
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  
-  const [needSearchQuery, setNeedSearchQuery] = useState(""); // Needs araması için
+  const [needSearchQuery, setNeedSearchQuery] = useState(""); 
   const [needSearchResults, setNeedSearchResults] = useState<any[]>([]);
-
-  const [offerQuery, setOfferQuery] = useState(""); // Offers araması için
+  const [offerQuery, setOfferQuery] = useState(""); 
   const [offerResults, setOfferResults] = useState<any[]>([]);
 
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
-  
-  // Yeni Need Ekleme State'leri
   const [needLocation, setNeedLocation] = useState("");
   const [needText, setNeedText] = useState("");
   const [needPrice, setNeedPrice] = useState("1");
   
-  // Veri Listeleri
+  // Liste State'leri
   const [needs, setNeeds] = useState<any[]>([]);
   const [lastOffers, setLastOffers] = useState<any[]>([]);
 
@@ -71,16 +67,13 @@ export default function Home() {
           setOffer(profData.profile.talents || "");
         }
       }
-      // En yeni 10 Need getir
       const needsRes = await fetch('/api/needs');
       const needsData = await needsRes.json();
       setNeeds(needsData.needs?.slice(0, 10) || []);
 
-      // Son güncellenen 10 kullanıcı (Offer) getir
       const offersRes = await fetch('/api/search?q='); 
       const offersData = await offersRes.json();
       setLastOffers(offersData.users?.slice(0, 10) || []);
-
     } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
@@ -106,7 +99,7 @@ export default function Home() {
     init();
   }, [fetchAllData]);
 
-  // --- SEARCH LOGIC (Debounced) ---
+  // --- SEARCH LOGIC ---
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length > 1) {
@@ -164,9 +157,7 @@ export default function Home() {
 
   const handleAddNeed = async () => {
     if (!needText) return setStatus("Write your need.");
-    if (!context?.user?.fid) return setStatus("Login required.");
-    if (!currentAddress) return setStatus("Connect wallet.");
-    
+    if (!context?.user?.fid || !currentAddress) return setStatus("Login/Wallet required.");
     try {
       setStatus("Posting...");
       const res = await fetch("/api/needs", {
@@ -181,17 +172,13 @@ export default function Home() {
           price: needPrice.toString(),
         }),
       });
-
       if (res.ok) {
         setStatus("Need posted! ✅");
         setNeedText(""); setNeedLocation("");
         fetchAllData(context.user.fid);
         setTimeout(() => setStatus(""), 2000);
-      } else {
-        const data = await res.json();
-        setStatus(`Error: ${data.error || "Failed"}`); 
       }
-    } catch (e: any) { setStatus(`Error: ${e.message}`); }
+    } catch (e: any) { setStatus("Error posting."); }
   };
 
   const handleSaveProfile = async () => {
@@ -201,13 +188,7 @@ export default function Home() {
       const res = await fetch("/api/profile", { 
         method: "POST", 
         headers: { "Content-Type": "application/json", "x-farcaster-fid": context.user.fid.toString() }, 
-        body: JSON.stringify({ 
-          fid: Number(context.user.fid), 
-          username: context.user.username, 
-          city: location, 
-          talents: offer, 
-          address: currentAddress.toLowerCase() 
-        }) 
+        body: JSON.stringify({ fid: Number(context.user.fid), username: context.user.username, city: location, talents: offer, address: currentAddress.toLowerCase() }) 
       });
       if (res.ok) {
         setStatus("Profile Updated! ✅");
@@ -220,7 +201,6 @@ export default function Home() {
   const handleDeleteNeed = async (id: string) => {
     if (!id || !context?.user?.fid || !currentAddress) return;
     try {
-      setStatus("Deleting...");
       const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 
         method: "DELETE",
         headers: { "Content-Type": "application/json", "x-farcaster-fid": context.user.fid.toString() },
@@ -240,16 +220,33 @@ export default function Home() {
       <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
       <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>Houra is a peer-to-peer <strong>Time Economy</strong> platform.</p>
       <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <p>📍 <strong>Profile:</strong> Set your location and offer.</p>
-        <p>⏳ <strong>Earn:</strong> Help others and collect Houra.</p>
+        <p>📍 <strong>Profile:</strong> Set your location and what you offer.</p>
+        <p>⏳ <strong>Earn:</strong> Help others and collect Houra tokens.</p>
         <p>🛠️ <strong>Post:</strong> Share what you need and reward others.</p>
       </div>
-      <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Got it!</button>
+      <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
+       Read more about <Link href="https://en.wikipedia.org/wiki/Time-based_currency" style={{ color: '#2563eb', textDecoration: 'underline' }}>Time-based currencies</Link>.
+      </p>
+      {isFarcaster && (
+        <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>Got it!</button>
+      )}
     </div>
   );
 
   if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
 
+  // --- BOZULAN KISIM (FIXED): Farcaster dışından gelenler sadece burayı görür ---
+  if (!isFarcaster) {
+    return (
+      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
+        <AboutContent />
+        <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy © 2026</p>
+      </div>
+    );
+  }
+
+  // --- Farcaster İçindeki Uygulama Akışı ---
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       {/* HEADER */}
@@ -262,14 +259,12 @@ export default function Home() {
       </div>
 
       {isAboutOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <AboutContent />
-        </div>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}><AboutContent /></div>
       )}
       
       {/* 1. SEND PANEL */}
-      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '30px' }}>
-        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND:</label>
+      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '25px' }}>
+        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA:</label>
         {!selectedRecipient ? (
           <input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', outline: 'none' }} />
         ) : (
@@ -279,19 +274,19 @@ export default function Home() {
           </div>
         )}
         {searchResults.length > 0 && !selectedRecipient && (
-          <div style={{ background: '#111', borderRadius: '10px', marginTop: '5px', maxHeight: '150px', overflowY: 'auto' }}>
-            {searchResults.map(u => <div key={u.fid} onClick={() => setSelectedRecipient(u)} style={{ padding: '10px', borderBottom: '1px solid #222', cursor: 'pointer' }}>@{u.username}</div>)}
+          <div style={{ background: '#111', borderRadius: '10px', marginTop: '5px' }}>
+            {searchResults.map(u => <div key={u.fid} onClick={() => setSelectedRecipient(u)} style={{ padding: '10px', borderBottom: '1px solid #222' }}>@{u.username}</div>)}
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', alignItems: 'center' }}>
-          <input type="number" value={sendAmount} onChange={(e) => setNeedPrice(e.target.value)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', width: '50%', outline: 'none' }} />
+          <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', width: '50%', outline: 'none' }} />
           <span style={{ fontSize: '0.8rem' }}>Bal: {formattedBalance}</span>
         </div>
-        <button onClick={handleTransfer} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#fff', color: '#000', fontWeight: 'bold', marginTop: '10px', border: 'none' }}>SEND HOURA</button>
+        <button onClick={handleTransfer} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#fff', color: '#000', fontWeight: 'bold', marginTop: '10px', border: 'none' }}>SEND</button>
       </div>
 
-      {/* 2. AYARLAR (ADD NEED & PROFILE) */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '30px' }}>
+      {/* 2. PROFILE & ADD NEED (Ayarlar) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '25px' }}>
         <details style={{ background: '#111', padding: '12px', borderRadius: '15px', border: '1px solid #222' }}>
           <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>➕ Add Your Need</summary>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
@@ -321,7 +316,7 @@ export default function Home() {
             <div key={i} style={{ padding: '15px', background: '#111', borderRadius: '15px', border: '1px solid #222' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 'bold' }}>@{n.username}</span>
-                {Number(n.fid) === Number(context?.user?.fid) && <button onClick={() => handleDeleteNeed(n.id)} style={{ color: '#ff4444', fontSize: '0.7rem', background: 'none', border: 'none', textDecoration: 'underline' }}>Delete</button>}
+                {Number(n.fid) === Number(context?.user?.fid) && <button onClick={() => handleDeleteNeed(n.id)} style={{ color: '#ff4444', fontSize: '0.7rem', background: 'none', border: 'none' }}>Delete</button>}
               </div>
               <p style={{ fontSize: '0.9rem', margin: '8px 0', color: '#ccc' }}>{n.text}</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#666' }}>

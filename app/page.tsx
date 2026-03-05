@@ -417,6 +417,9 @@ const handleDeleteNeed = async (id: string) => {
   </div>
   );
 
+const randomOffers = [...offerResults]
+  .sort(() => 0.5 - Math.random())
+  .slice(0, 10);
 
 
   // --- RENDER ---
@@ -698,7 +701,7 @@ const handleDeleteNeed = async (id: string) => {
 
             {activeModal === 'needs' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#22C55E' }}>📍 Local Needs</h3>
+                <h3 style={{ marginTop: 0, color: '#81007F' }}>Latest Needs</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   {needs.length > 0 ? needs.map((n, i) => (
                     <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
@@ -713,7 +716,7 @@ const handleDeleteNeed = async (id: string) => {
 
             {activeModal === 'groups' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#ef4444' }}>🏘️ Communities</h3>
+                <h3 style={{ marginTop: 0, color: '#6F2DA8' }}>Communities</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   <a href="https://warpcast.com/~/channel/houra" target="_blank" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
                   <a href="#" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🌐 Houra Global Telegram</a>
@@ -721,17 +724,46 @@ const handleDeleteNeed = async (id: string) => {
               </div>
             )}
 
-            {activeModal === 'offers' && (
+{activeModal === 'offers' && (
+  <div>
+    <h3 style={{ marginTop: 0, color: '#8d4585' }}>Offers</h3>
+    <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+      Featured community members near you:
+    </p>
+    
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {offerResults.length > 0 ? (
+        // offerResults'tan rastgele veya ilk 10'u gösteriyoruz
+        offerResults.slice(0, 10).map((user, i) => (
+          <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <h3 style={{ marginTop: 0, color: '#3b82f6' }}>✨ Special Offers</h3>
-                <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Hand-picked services near you will appear here.</p>
+                <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>@{user.username}</div>
+                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>📍 {user.city || "Global"}</div>
               </div>
-            )}
+              <button 
+                onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })}
+                style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                VIEW
+              </button>
+            </div>
+            <div style={{ fontSize: '0.85rem', marginTop: '8px', color: '#ccc', fontStyle: 'italic' }}>
+              "{user.talents || "No specific offer listed yet."}"
+            </div>
+          </div>
+        ))
+      ) : (
+        <p style={{ fontSize: '0.85rem', color: '#444' }}>No offers found. Try searching in the main menu!</p>
+      )}
+    </div>
+  </div>
+)}
 
             {activeModal === 'active' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#eab308' }}>🏆 Top Members</h3>
-                <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most time-contributions.</p>
+                <h3 style={{ marginTop: 0, color: '#B5338A' }}>Active Members</h3>
+                <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most Houra exchange.</p>
               </div>
             )}
           </div>
@@ -751,10 +783,10 @@ const handleDeleteNeed = async (id: string) => {
 
 const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
   const menuItems = [
-    { id: 'needs', label: '📍 Needs', color: '#22C55E' },
-    { id: 'offers', label: '✨ Offers', color: '#3b82f6' },
-    { id: 'active', label: '🏆 Active', color: '#eab308' },
-    { id: 'groups', label: '🏘️ Groups', color: '#ef4444' },
+    { id: 'needs', label: 'Needs', color: '#81007F' },
+    { id: 'offers', label: 'Offers', color: '#8d4585' },
+    { id: 'active', label: 'Members', color: '#B5338A' },
+    { id: 'groups', label: 'Communities', color: '#6F2DA8' },
   ];
 
   return (

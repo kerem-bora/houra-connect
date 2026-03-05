@@ -435,9 +435,9 @@ const handleDeleteNeed = async (id: string) => {
   </div>
   );
 
-const randomOffers = [...offerResults]
-  .sort(() => 0.5 - Math.random())
-  .slice(0, 10);
+const randomOffers = offerResults 
+  ? [...offerResults].sort(() => 0.5 - Math.random()).slice(0, 10) 
+  : [];
 
 
   // --- RENDER ---
@@ -745,39 +745,30 @@ const randomOffers = [...offerResults]
 {activeModal === 'offers' && (
   <div>
     <h3 style={{ marginTop: 0, color: '#2563eb' }}>Offers</h3>
-    
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-      {/* 1. DURUM: VERİ YÜKLENİYOR (offerResults null iken) */}
       {offerResults === null ? (
-        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-          ⌛ Loading offers...
-        </div>
+        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>⌛ Loading offers...</div>
       ) : offerResults.length > 0 ? (
-        /* 2. DURUM: VERİ GELDİ VE DOLU */
-        [...offerResults]
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 10)
-          .map((user, i) => (
-            <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>@{user.username}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"}</div>
-                </div>
-                <button 
-                  onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })}
-                  style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                  VIEW
-                </button>
+        randomOffers.map((user, i) => (
+          <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>@{user.username}</div>
+                <div style={{ fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"}</div>
               </div>
-              <div style={{ fontSize: '0.85rem', marginTop: '8px', color: '#ccc', fontStyle: 'italic' }}>
-                "{user.talents || "No specific offer listed."}"
-              </div>
+              <button 
+                onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })}
+                style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                VIEW
+              </button>
             </div>
-          ))
+            <div style={{ fontSize: '0.85rem', marginTop: '8px', color: '#ccc', fontStyle: 'italic' }}>
+              "{user.talents || "No specific offer listed."}"
+            </div>
+          </div>
+        ))
       ) : (
-        /* 3. DURUM: VERİ ÇEKİLDİ AMA TABLO BOŞ */
         <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
           No members found with registered offers.
         </div>

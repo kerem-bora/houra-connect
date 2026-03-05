@@ -536,7 +536,7 @@ const handleDeleteNeed = async (id: string) => {
       </div>
 
    {/* 2. MENU */}
-<YoncaMenu onLeafClick={(type) => setActiveModal(type as any)} />
+<MenuGrid onItemClick={(type) => setActiveModal(type as any)} />
 
       {/* 3. SEARCH FOR OFFERS */}
 
@@ -689,19 +689,16 @@ const handleDeleteNeed = async (id: string) => {
 
       </div>
 
-          {/* 6. LATEST NEEDS BİTİŞİ */}
 
-      {/* --- DİNAMİK MODAL BAŞLANGICI --- */}
-      {activeModal && (
+     {activeModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '450px', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}>
             
-            {/* Kapatma Butonu */}
             <button onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: '#666', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
 
             {activeModal === 'needs' && (
               <div>
-                <h3 style={{ marginTop: 0 }}>📍 Local Needs</h3>
+                <h3 style={{ marginTop: 0, color: '#22C55E' }}>📍 Local Needs</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   {needs.length > 0 ? needs.map((n, i) => (
                     <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
@@ -716,7 +713,7 @@ const handleDeleteNeed = async (id: string) => {
 
             {activeModal === 'groups' && (
               <div>
-                <h3 style={{ marginTop: 0 }}>🏘️ Communities</h3>
+                <h3 style={{ marginTop: 0, color: '#ef4444' }}>🏘️ Communities</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   <a href="https://warpcast.com/~/channel/houra" target="_blank" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
                   <a href="#" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🌐 Houra Global Telegram</a>
@@ -726,23 +723,22 @@ const handleDeleteNeed = async (id: string) => {
 
             {activeModal === 'offers' && (
               <div>
-                <h3 style={{ marginTop: 0 }}>✨ Special Offers</h3>
+                <h3 style={{ marginTop: 0, color: '#3b82f6' }}>✨ Special Offers</h3>
                 <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Hand-picked services near you will appear here.</p>
               </div>
             )}
 
             {activeModal === 'active' && (
               <div>
-                <h3 style={{ marginTop: 0 }}>🏆 Top Members</h3>
+                <h3 style={{ marginTop: 0, color: '#eab308' }}>🏆 Top Members</h3>
                 <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most time-contributions.</p>
               </div>
             )}
           </div>
         </div>
       )}
-      {/* --- DİNAMİK MODAL BİTİŞİ --- */}
 
-      <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy © 2026</p>
+      <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
 
       {status && (
         <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 3000 }}>
@@ -753,17 +749,41 @@ const handleDeleteNeed = async (id: string) => {
   );
 }
 
-// YONCAMENU BİLEŞENİ (Home fonksiyonunun dışında olmalı)
-const YoncaMenu = ({ onLeafClick }: { onLeafClick: (type: string) => void }) => {
+const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
+  const menuItems = [
+    { id: 'needs', label: '📍 Needs', color: '#22C55E' },
+    { id: 'offers', label: '✨ Offers', color: '#3b82f6' },
+    { id: 'active', label: '🏆 Active', color: '#eab308' },
+    { id: 'groups', label: '🏘️ Groups', color: '#ef4444' },
+  ];
+
   return (
-    <div style={{ width: '160px', margin: '20px auto', position: 'relative', cursor: 'pointer' }}>
-      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0px 4px 10px rgba(0,0,0,0.5))' }}>
-        <path d="M50 50 C 20 20, 10 40, 50 50" fill="#22C55E" onClick={() => onLeafClick('needs')} />
-        <path d="M50 50 C 80 20, 90 40, 50 50" fill="#10B981" onClick={() => onLeafClick('offers')} />
-        <path d="M50 50 C 20 80, 10 60, 50 50" fill="#059669" onClick={() => onLeafClick('active')} />
-        <path d="M50 50 C 80 80, 90 60, 50 50" fill="#15803D" onClick={() => onLeafClick('groups')} />
-        <rect x="48" y="50" width="4" height="20" fill="#064E3B" rx="2" />
-      </svg>
+    <div style={{ 
+      display: 'grid', 
+      gridTemplateColumns: '1fr 1fr', 
+      gap: '12px', 
+      margin: '20px 0' 
+    }}>
+      {menuItems.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => onItemClick(item.id)}
+          style={{
+            padding: '15px',
+            borderRadius: '16px',
+            background: '#111',
+            border: `1px solid ${item.color}44`,
+            color: item.color,
+            fontWeight: 'bold',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.background = `${item.color}11`}
+          onMouseOut={(e) => e.currentTarget.style.background = '#111'}
+        >
+          {item.label}
+        </button>
+      ))}
     </div>
   );
-};

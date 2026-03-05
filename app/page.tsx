@@ -227,13 +227,18 @@ useEffect(() => {
   if (activeModal === 'offers') {
     const fetchOffers = async () => {
       try {
-        // Eğer offerResults zaten doluysa ve her seferinde yenilenmesin dersen 
-        // if (offerResults.length > 0) return; ekleyebilirsin.
+        setOfferResults(null as any); // Yükleme başladığı için null set ediyoruz
         const res = await fetch('/api/search?q=');
-        const data = await res.json();
-        setOfferResults(data.users || []);
+        if (res.ok) {
+          const data = await res.json();
+          // Sadece 'talents' alanı dolu olanları veya tüm kullanıcıları set edebilirsin
+          setOfferResults(data.users || []);
+        } else {
+          setOfferResults([]); 
+        }
       } catch (e) {
         console.error("Offers fetch error:", e);
+        setOfferResults([]);
       }
     };
     fetchOffers();
@@ -719,7 +724,7 @@ const randomOffers = [...offerResults]
 
             {activeModal === 'needs' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#40C934' }}>Latest Needs</h3>
+                <h3 style={{ marginTop: 0, color: '#1e40af' }}>Latest Needs</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   {needs.length > 0 ? needs.map((n, i) => (
                     <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
@@ -734,7 +739,7 @@ const randomOffers = [...offerResults]
 
             {activeModal === 'groups' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#35B6DB' }}>Communities</h3>
+                <h3 style={{ marginTop: 0, color: '#1e40af' }}>Communities</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   <a href="https://warpcast.com/~/channel/houra" target="_blank" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
                   <a href="#" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🌐 Houra Global Telegram</a>
@@ -744,11 +749,16 @@ const randomOffers = [...offerResults]
 
 {activeModal === 'offers' && (
   <div>
-    <h3 style={{ marginTop: 0, color: '#35B6DB' }}>Offers</h3>
+    <h3 style={{ marginTop: 0, color: '#1e40af' }}>Offers</h3>
     
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-      {offerResults && offerResults.length > 0 ? (
-        // Rastgele 10 tanesini seç
+      {/* 1. DURUM: VERİ YÜKLENİYOR (offerResults null iken) */}
+      {offerResults === null ? (
+        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+          ⌛ Loading offers...
+        </div>
+      ) : offerResults.length > 0 ? (
+        /* 2. DURUM: VERİ GELDİ VE DOLU */
         [...offerResults]
           .sort(() => 0.5 - Math.random())
           .slice(0, 10)
@@ -761,7 +771,7 @@ const randomOffers = [...offerResults]
                 </div>
                 <button 
                   onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })}
-                  style={{ background: 'none', border: 'none', color: '#35B6DB', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                  style={{ background: 'none', border: 'none', color: '#1e40af', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
                 >
                   VIEW
                 </button>
@@ -772,8 +782,9 @@ const randomOffers = [...offerResults]
             </div>
           ))
       ) : (
+        /* 3. DURUM: VERİ ÇEKİLDİ AMA TABLO BOŞ */
         <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-           {offerResults === null ? "⌛ Loading offers..." : "No offers found at the moment."}
+          No members found with registered offers.
         </div>
       )}
     </div>
@@ -781,7 +792,7 @@ const randomOffers = [...offerResults]
 )}
             {activeModal === 'active' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#35B6DB' }}>Active Members</h3>
+                <h3 style={{ marginTop: 0, color: '#1e40af' }}>Active Members</h3>
                 <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most Houra exchange.</p>
               </div>
             )}
@@ -802,10 +813,10 @@ const randomOffers = [...offerResults]
 
 const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
   const menuItems = [
-    { id: 'needs', label: 'Needs', color: '#35B6DB' },
-    { id: 'offers', label: 'Offers', color: '#35B6DB' },
-    { id: 'active', label: 'Members', color: '#35B6DB' },
-    { id: 'groups', label: 'Communities', color: '#35B6DB' },
+    { id: 'needs', label: 'Needs', color: '#1e40af' },
+    { id: 'offers', label: 'Offers', color: '#1e40af' },
+    { id: 'active', label: 'Members', color: '#1e40af' },
+    { id: 'groups', label: 'Communities', color: '#1e40af' },
   ];
 
   return (

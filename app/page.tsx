@@ -689,6 +689,33 @@ const handleDeleteNeed = async (id: string) => {
 
       </div>
 
+            {activeModal === 'groups' && (
+              <div>
+                <h3 style={{ marginTop: 0 }}>🏘️ Communities</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+                  <a href="https://warpcast.com/~/channel/houra" target="_blank" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
+                  <a href="#" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🌐 Houra Global Telegram</a>
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'offers' && (
+              <div>
+                <h3 style={{ marginTop: 0 }}>✨ Special Offers</h3>
+                <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Hand-picked services near you will appear here.</p>
+              </div>
+            )}
+
+            {activeModal === 'active' && (
+              <div>
+                <h3 style={{ marginTop: 0 }}>🏆 Top Members</h3>
+                <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most time-contributions.</p>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
 
       <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy © 2026</p>
@@ -713,6 +740,7 @@ const handleDeleteNeed = async (id: string) => {
 
 const YoncaMenu = ({ onLeafClick }: { onLeafClick: (type: string) => void }) => {
   return (
+
     <div style={{ width: '160px', margin: '20px auto', position: 'relative', cursor: 'pointer' }}>
       <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0px 4px 10px rgba(0,0,0,0.5))' }}>
         {/* Üst Sol - Needs */}

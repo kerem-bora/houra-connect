@@ -152,6 +152,12 @@ export default function Home() {
 
       setNeeds(needsData.needs || []);
 
+      const membersRes = await fetch('/api/search?q=');
+
+      const membersData = await membersRes.json();
+
+      setOfferResults(membersData.users || []);
+
     } catch (e) { console.error("Fetch Error:", e); }
 
   }, []);
@@ -560,7 +566,12 @@ const handleDeleteNeed = async (id: string) => {
 
       </div>
 
-<MenuGrid onItemClick={(type) => setActiveModal(type)} />
+<MenuGrid onItemClick={(type) => {
+  setActiveModal(type);
+  if (type === 'offers' || type === 'needs') {
+    fetchAllData(); // Modal açılırken verileri arka planda tazeler
+  }
+}} />
 
       {/* 2. SEARCH FOR OFFERS */}
 
@@ -668,50 +679,6 @@ const handleDeleteNeed = async (id: string) => {
       </details>
 
 
-
-      {/* 5. LATEST NEEDS */}
-
-      <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '30px' }}>
-
-        {needs.map((need: any, idx: number) => (
-
-          <div key={idx} style={{ padding: '16px', background: '#111', borderRadius: '20px', border: '1px solid #222' }}>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-
-              <span style={{ fontWeight: 'bold' }}>@{need.username}</span>
-
-              {context?.user?.fid && Number(need.fid) === Number(context.user.fid) && (
-
-                <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
-
-              )}
-
-            </div>
-
-            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#ccc' }}>{need.text}</p>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-
-                 <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-
-                 <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
-
-               </div>
-
-               <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
-
-            </div>
-
-          </div>
-
-        ))}
-
-      </div>
 
 {activeModal && (
   <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>

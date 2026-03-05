@@ -569,7 +569,7 @@ const handleDeleteNeed = async (id: string) => {
 <MenuGrid onItemClick={(type) => {
   setActiveModal(type);
   if (type === 'offers' || type === 'needs') {
-    fetchAllData(); // Modal açılırken verileri arka planda tazeler
+    await fetchAllData(context?.user?.fid);
   }
 }} />
 

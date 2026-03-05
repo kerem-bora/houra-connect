@@ -221,26 +221,6 @@ export default function Home() {
 
   }, [offerQuery]);
 
-// --- Offers Modal preload ---
-
-useEffect(() => {
-  if (activeModal === 'offers') {
-    const fetchOffers = async () => {
-      try {
-        setOfferResults(null); // Yükleme başladığını belirtmek için null yapıyoruz
-        const res = await fetch('/api/search?q=');
-        const data = await res.json();
-        setOfferResults(data.users || []);
-      } catch (e) {
-        console.error("Offers fetch error:", e);
-        setOfferResults([]); 
-      }
-    };
-    fetchOffers();
-  }
-}, [activeModal]);
-
-
   // --- HANDLERS ---
 
   const handleTransfer = useCallback(async () => {
@@ -316,8 +296,7 @@ const handleAddNeed = async () => {
         setTimeout(() => setStatus(""), 2000);
       } else {
         const data = await res.json();
-        // Backend'den gelen "Profile not found" uyarısını burada kullanıcı görecek
-        setStatus(`Error: ${data.error || "Failed"}`); 
+                setStatus(`Error: ${data.error || "Failed"}`); 
       }
     } catch (e: any) { setStatus(`Error: ${e.message}`); }
   };
@@ -435,10 +414,9 @@ const handleDeleteNeed = async (id: string) => {
   </div>
   );
 
-const randomOffers = offerResults 
+const randomOffers = (offerResults && Array.isArray(offerResults)) 
   ? [...offerResults].sort(() => 0.5 - Math.random()).slice(0, 10) 
   : [];
-
 
   // --- RENDER ---
 
@@ -711,7 +689,7 @@ const randomOffers = offerResults
       </div>
 
 
-     {activeModal && (
+{activeModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '450px', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}>
             
@@ -736,54 +714,38 @@ const randomOffers = offerResults
               <div>
                 <h3 style={{ marginTop: 0, color: '#2563eb' }}>Communities</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-                  <a href="https://warpcast.com/~/channel/houra" target="_blank" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
+                  <a href="https://warpcast.com/~/channel/houra" target="_blank" rel="noopener noreferrer" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
                   <a href="#" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🌐 Houra Global Telegram</a>
                 </div>
               </div>
             )}
 
-{activeModal === 'offers' && (
-  <div>
-    <h3 style={{ marginTop: 0, color: '#2563eb' }}>Offers</h3>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-      {offerResults === null ? (
-        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>⌛ Loading offers...</div>
-      ) : offerResults.length > 0 ? (
-        randomOffers.map((user, i) => (
-          <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            {activeModal === 'offers' && (
               <div>
-                <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>@{user.username}</div>
-                <div style={{ fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"}</div>
+                <h3 style={{ marginTop: 0, color: '#2563eb' }}>Offers</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+                  {offerResults && offerResults.length > 0 ? (
+                    randomOffers.map((user: any, i: number) => (
+                      <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>@{user.username}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"}</div>
+                        <div style={{ fontSize: '0.85rem', marginTop: '5px', color: '#ccc' }}>{user.talents || "Community member"}</div>
+                      </div>
+                    ))
+                  ) : <p style={{ color: '#666' }}>Loading offers...</p>}
+                </div>
               </div>
-              <button 
-                onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })}
-                style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                VIEW
-              </button>
-            </div>
-            <div style={{ fontSize: '0.85rem', marginTop: '8px', color: '#ccc', fontStyle: 'italic' }}>
-              "{user.talents || "No specific offer listed."}"
-            </div>
-          </div>
-        ))
-      ) : (
-        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-          No members found with registered offers.
-        </div>
-      )}
-    </div>
-  </div>
-)}
+            )}
+
             {activeModal === 'active' && (
               <div>
                 <h3 style={{ marginTop: 0, color: '#2563eb' }}>Active Members</h3>
                 <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most Houra exchange.</p>
               </div>
             )}
-          </div>
-        </div>
+
+          </div> {/* İç beyaz panel kapanışı */}
+        </div>   {/* Arka plan overlay kapanışı */}
       )}
 
       <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>

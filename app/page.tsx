@@ -787,3 +787,4 @@ const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
       ))}
     </div>
   );
+};

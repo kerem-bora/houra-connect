@@ -39,6 +39,8 @@ export default function Home() {
 
   const [context, setContext] = useState<any>(null);
 
+  const [activeModal, setActiveModal] = useState<"needs" | "groups" | "offers" | "active" | null>(null);
+
   const [location, setLocation] = useState("");
 
   const [offer, setOffer] = useState("");
@@ -533,9 +535,10 @@ const handleDeleteNeed = async (id: string) => {
 
       </div>
 
+   {/* 2. MENU */}
+<YoncaMenu onLeafClick={(type) => setActiveModal(type as any)} />
 
-
-      {/* 2. SEARCH FOR OFFERS */}
+      {/* 3. SEARCH FOR OFFERS */}
 
       <div style={{ marginBottom: '20px' }}>
 
@@ -573,7 +576,7 @@ const handleDeleteNeed = async (id: string) => {
 
 
 
-      {/* 3. ADD YOUR NEED */}
+      {/* 4. ADD YOUR NEED */}
 
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
 
@@ -609,7 +612,7 @@ const handleDeleteNeed = async (id: string) => {
 
 
 
-      {/* 4. PROFILE SETTINGS */}
+      {/* 5. PROFILE SETTINGS */}
 
       <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
 
@@ -642,7 +645,7 @@ const handleDeleteNeed = async (id: string) => {
 
 
 
-      {/* 5. LATEST NEEDS */}
+      {/* 6. LATEST NEEDS */}
 
       <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>Latest Needs</h3>
 
@@ -707,3 +710,22 @@ const handleDeleteNeed = async (id: string) => {
   );
 
 }
+
+const YoncaMenu = ({ onLeafClick }: { onLeafClick: (type: string) => void }) => {
+  return (
+    <div style={{ width: '160px', margin: '20px auto', position: 'relative', cursor: 'pointer' }}>
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0px 4px 10px rgba(0,0,0,0.5))' }}>
+        {/* Üst Sol - Needs */}
+        <path d="M50 50 C 20 20, 10 40, 50 50" fill="#22C55E" onClick={() => onLeafClick('needs')} />
+        {/* Üst Sağ - Offers */}
+        <path d="M50 50 C 80 20, 90 40, 50 50" fill="#10B981" onClick={() => onLeafClick('offers')} />
+        {/* Alt Sol - Active Users */}
+        <path d="M50 50 C 20 80, 10 60, 50 50" fill="#059669" onClick={() => onLeafClick('active')} />
+        {/* Alt Sağ - Groups */}
+        <path d="M50 50 C 80 80, 90 60, 50 50" fill="#15803D" onClick={() => onLeafClick('groups')} />
+        {/* Sap */}
+        <rect x="48" y="50" width="4" height="20" fill="#064E3B" rx="2" />
+      </svg>
+    </div>
+  );
+};

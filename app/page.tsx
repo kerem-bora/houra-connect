@@ -552,7 +552,7 @@ const handleDeleteNeed = async (id: string) => {
 
           <input type="number" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} style={{ width: '50%', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', fontWeight: 'bold', outline: 'none' }} />
 
-          <span style={{ fontSize: '0.8rem' }}>Bal: {formattedBalance}</span>
+          <span style={{ fontSize: '0.8rem' }}>Balance: {formattedBalance}</span>
 
         </div>
 
@@ -719,18 +719,60 @@ const handleDeleteNeed = async (id: string) => {
       <button onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: '#666', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
       
       <h3 style={{ marginTop: 0, color: '#2563eb', textTransform: 'capitalize' }}>{activeModal}</h3>
-      <div style={{ marginTop: '20px' }}>
-        {activeModal === 'groups' ? (
-          <a href="https://warpcast.com/~/channel/houra" target="_blank" rel="noopener noreferrer" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', display: 'block', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
-        ) : (
-          <p style={{ color: '#ccc', fontSize: '0.9rem' }}>Showing latest {activeModal} data...</p>
+      <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        
+        {activeModal === 'needs' && (
+          needs.length > 0 ? (
+            needs.map((need: any, idx: number) => (
+              <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{need.username}</span>
+                </div>
+                <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{need.text}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+                    <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
+                  </div>
+                  <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>VIEW</button>
+                </div>
+              </div>
+            ))
+          ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No needs found.</p>
+        )}
+
+            {activeModal === 'offers' && (
+          offerResults.length > 0 ? (
+            offerResults.map((user: any, idx: number) => (
+              <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</span>
+                </div>
+                <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{user.talents || user.bio || "No offer description provided."}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {user.city || "Global"}</span>
+                  <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>VIEW</button>
+                </div>
+              </div>
+            ))
+          ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No offers found. Try searching for a talent on the home page.</p>
+        )}
+
+        {activeModal === 'groups' && (
+          <a href="https://warpcast.com/~/channel/houra" target="_blank" rel="noopener noreferrer" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', display: 'block', textAlign: 'center', fontWeight: 'bold' }}>
+            🟣 Houra Farcaster Channel
+          </a>
+        )}
+
+              {activeModal === 'active' && (
+          <p style={{ color: '#ccc', fontSize: '0.9rem', textAlign: 'center' }}>coming soon...</p>
         )}
       </div>
     </div>
   </div>
 )}
 
-      <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy © 2026</p>
+      <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
 
 
 

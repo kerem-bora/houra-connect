@@ -221,6 +221,24 @@ export default function Home() {
 
   }, [offerQuery]);
 
+// --- Offers Modal preload ---
+
+useEffect(() => {
+  if (activeModal === 'offers') {
+    const fetchOffers = async () => {
+      try {
+        // Eğer offerResults zaten doluysa ve her seferinde yenilenmesin dersen 
+        // if (offerResults.length > 0) return; ekleyebilirsin.
+        const res = await fetch('/api/search?q=');
+        const data = await res.json();
+        setOfferResults(data.users || []);
+      } catch (e) {
+        console.error("Offers fetch error:", e);
+      }
+    };
+    fetchOffers();
+  }
+}, [activeModal]);
 
 
   // --- HANDLERS ---
@@ -701,7 +719,7 @@ const randomOffers = [...offerResults]
 
             {activeModal === 'needs' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#81007F' }}>Latest Needs</h3>
+                <h3 style={{ marginTop: 0, color: '#40C934' }}>Latest Needs</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   {needs.length > 0 ? needs.map((n, i) => (
                     <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
@@ -716,7 +734,7 @@ const randomOffers = [...offerResults]
 
             {activeModal === 'groups' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#6F2DA8' }}>Communities</h3>
+                <h3 style={{ marginTop: 0, color: '#40C934' }}>Communities</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   <a href="https://warpcast.com/~/channel/houra" target="_blank" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
                   <a href="#" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🌐 Houra Global Telegram</a>
@@ -726,43 +744,43 @@ const randomOffers = [...offerResults]
 
 {activeModal === 'offers' && (
   <div>
-    <h3 style={{ marginTop: 0, color: '#8d4585' }}>Offers</h3>
-    <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-      Featured community members near you:
-    </p>
+    <h3 style={{ marginTop: 0, color: '#40C934' }}>Offers</h3>
     
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
       {offerResults.length > 0 ? (
-        // offerResults'tan rastgele veya ilk 10'u gösteriyoruz
-        offerResults.slice(0, 10).map((user, i) => (
-          <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>@{user.username}</div>
-                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>📍 {user.city || "Global"}</div>
+        [...offerResults]
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 10)
+          .map((user, i) => (
+            <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>@{user.username}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"}</div>
+                </div>
+                <button 
+                  onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })}
+                  style={{ background: 'none', border: 'none', color: '#40C934', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  VIEW
+                </button>
               </div>
-              <button 
-                onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })}
-                style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                VIEW
-              </button>
+              <div style={{ fontSize: '0.85rem', marginTop: '8px', color: '#ccc', fontStyle: 'italic' }}>
+                "{user.talents || "No specific offer listed."}"
+              </div>
             </div>
-            <div style={{ fontSize: '0.85rem', marginTop: '8px', color: '#ccc', fontStyle: 'italic' }}>
-              "{user.talents || "No specific offer listed yet."}"
-            </div>
-          </div>
-        ))
+          ))
       ) : (
-        <p style={{ fontSize: '0.85rem', color: '#444' }}>No offers found. Try searching in the main menu!</p>
+        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+          ⌛ Loading offers...
+        </div>
       )}
     </div>
   </div>
 )}
-
             {activeModal === 'active' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#B5338A' }}>Active Members</h3>
+                <h3 style={{ marginTop: 0, color: '#40C934' }}>Active Members</h3>
                 <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most Houra exchange.</p>
               </div>
             )}
@@ -783,10 +801,10 @@ const randomOffers = [...offerResults]
 
 const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
   const menuItems = [
-    { id: 'needs', label: 'Needs', color: '#81007F' },
-    { id: 'offers', label: 'Offers', color: '#8d4585' },
-    { id: 'active', label: 'Members', color: '#B5338A' },
-    { id: 'groups', label: 'Communities', color: '#6F2DA8' },
+    { id: 'needs', label: 'Needs', color: '#40C934' },
+    { id: 'offers', label: 'Offers', color: '#40C934' },
+    { id: 'active', label: 'Members', color: '#40C934' },
+    { id: 'groups', label: 'Communities', color: '#40C934' },
   ];
 
   return (

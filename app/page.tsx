@@ -57,7 +57,7 @@ export default function Home() {
 
   const [offerQuery, setOfferQuery] = useState("");
 
-  const [offerResults, setOfferResults] = useState<any[]>([]);
+  const [offerResults, setOfferResults] = useState<any[] | null>(null);
 
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
 
@@ -227,18 +227,13 @@ useEffect(() => {
   if (activeModal === 'offers') {
     const fetchOffers = async () => {
       try {
-        setOfferResults(null as any); // Yükleme başladığı için null set ediyoruz
+        setOfferResults(null); // Yükleme başladığını belirtmek için null yapıyoruz
         const res = await fetch('/api/search?q=');
-        if (res.ok) {
-          const data = await res.json();
-          // Sadece 'talents' alanı dolu olanları veya tüm kullanıcıları set edebilirsin
-          setOfferResults(data.users || []);
-        } else {
-          setOfferResults([]); 
-        }
+        const data = await res.json();
+        setOfferResults(data.users || []);
       } catch (e) {
         console.error("Offers fetch error:", e);
-        setOfferResults([]);
+        setOfferResults([]); 
       }
     };
     fetchOffers();
@@ -507,7 +502,7 @@ const randomOffers = [...offerResults]
 
       {/* 1. SEND PANEL */}
 
-      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
+      <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #2563eb 0%, #7e22ce 100%)', marginBottom: '20px' }}>
 
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
 
@@ -724,7 +719,7 @@ const randomOffers = [...offerResults]
 
             {activeModal === 'needs' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#1e40af' }}>Latest Needs</h3>
+                <h3 style={{ marginTop: 0, color: '#2563eb' }}>Latest Needs</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   {needs.length > 0 ? needs.map((n, i) => (
                     <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
@@ -739,7 +734,7 @@ const randomOffers = [...offerResults]
 
             {activeModal === 'groups' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#1e40af' }}>Communities</h3>
+                <h3 style={{ marginTop: 0, color: '#2563eb' }}>Communities</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                   <a href="https://warpcast.com/~/channel/houra" target="_blank" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🟣 Houra Farcaster Channel</a>
                   <a href="#" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', textAlign: 'center' }}>🌐 Houra Global Telegram</a>
@@ -749,7 +744,7 @@ const randomOffers = [...offerResults]
 
 {activeModal === 'offers' && (
   <div>
-    <h3 style={{ marginTop: 0, color: '#1e40af' }}>Offers</h3>
+    <h3 style={{ marginTop: 0, color: '#2563eb' }}>Offers</h3>
     
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
       {/* 1. DURUM: VERİ YÜKLENİYOR (offerResults null iken) */}
@@ -771,7 +766,7 @@ const randomOffers = [...offerResults]
                 </div>
                 <button 
                   onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })}
-                  style={{ background: 'none', border: 'none', color: '#1e40af', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                  style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
                 >
                   VIEW
                 </button>
@@ -792,7 +787,7 @@ const randomOffers = [...offerResults]
 )}
             {activeModal === 'active' && (
               <div>
-                <h3 style={{ marginTop: 0, color: '#1e40af' }}>Active Members</h3>
+                <h3 style={{ marginTop: 0, color: '#2563eb' }}>Active Members</h3>
                 <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most Houra exchange.</p>
               </div>
             )}
@@ -813,10 +808,10 @@ const randomOffers = [...offerResults]
 
 const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
   const menuItems = [
-    { id: 'needs', label: 'Needs', color: '#1e40af' },
-    { id: 'offers', label: 'Offers', color: '#1e40af' },
-    { id: 'active', label: 'Members', color: '#1e40af' },
-    { id: 'groups', label: 'Communities', color: '#1e40af' },
+    { id: 'needs', label: 'Needs', color: '#2563eb' },
+    { id: 'offers', label: 'Offers', color: '#2563eb' },
+    { id: 'active', label: 'Members', color: '#2563eb' },
+    { id: 'groups', label: 'Communities', color: '#2563eb' },
   ];
 
   return (

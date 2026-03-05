@@ -222,7 +222,7 @@ export default function Home() {
 
         setSearchResults(data.users || []);
 
-      } else setSearchResults([]);
+      }
 
     }, 400);
 

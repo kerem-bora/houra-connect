@@ -689,6 +689,31 @@ const handleDeleteNeed = async (id: string) => {
 
       </div>
 
+          {/* 6. LATEST NEEDS BİTİŞİ */}
+
+      {/* --- DİNAMİK MODAL BAŞLANGICI --- */}
+      {activeModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '450px', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}>
+            
+            {/* Kapatma Butonu */}
+            <button onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: '#666', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+
+            {activeModal === 'needs' && (
+              <div>
+                <h3 style={{ marginTop: 0 }}>📍 Local Needs</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+                  {needs.length > 0 ? needs.map((n, i) => (
+                    <div key={i} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: '1px solid #222' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>@{n.username}</div>
+                      <div style={{ fontSize: '0.85rem', margin: '5px 0' }}>{n.text}</div>
+                      <div style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.75rem' }}>⏳ {n.price} Houra</div>
+                    </div>
+                  )) : <p>No needs found.</p>}
+                </div>
+              </div>
+            )}
+
             {activeModal === 'groups' && (
               <div>
                 <h3 style={{ marginTop: 0 }}>🏘️ Communities</h3>
@@ -712,46 +737,31 @@ const handleDeleteNeed = async (id: string) => {
                 <p style={{ fontSize: '0.85rem', color: '#ccc' }}>Members with the most time-contributions.</p>
               </div>
             )}
-
           </div>
         </div>
       )}
-
+      {/* --- DİNAMİK MODAL BİTİŞİ --- */}
 
       <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy © 2026</p>
 
-
-
       {status && (
-
         <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 3000 }}>
-
           {status}
-
         </div>
-
       )}
-
     </div>
-
   );
-
 }
 
+// YONCAMENU BİLEŞENİ (Home fonksiyonunun dışında olmalı)
 const YoncaMenu = ({ onLeafClick }: { onLeafClick: (type: string) => void }) => {
   return (
-
     <div style={{ width: '160px', margin: '20px auto', position: 'relative', cursor: 'pointer' }}>
       <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0px 4px 10px rgba(0,0,0,0.5))' }}>
-        {/* Üst Sol - Needs */}
         <path d="M50 50 C 20 20, 10 40, 50 50" fill="#22C55E" onClick={() => onLeafClick('needs')} />
-        {/* Üst Sağ - Offers */}
         <path d="M50 50 C 80 20, 90 40, 50 50" fill="#10B981" onClick={() => onLeafClick('offers')} />
-        {/* Alt Sol - Active Users */}
         <path d="M50 50 C 20 80, 10 60, 50 50" fill="#059669" onClick={() => onLeafClick('active')} />
-        {/* Alt Sağ - Groups */}
         <path d="M50 50 C 80 80, 90 60, 50 50" fill="#15803D" onClick={() => onLeafClick('groups')} />
-        {/* Sap */}
         <rect x="48" y="50" width="4" height="20" fill="#064E3B" rx="2" />
       </svg>
     </div>

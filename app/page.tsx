@@ -566,10 +566,16 @@ const handleDeleteNeed = async (id: string) => {
 
       </div>
 
-<MenuGrid onItemClick={(type) => {
+<MenuGrid onItemClick={async (type) => { // Buraya 'async' eklendi
   setActiveModal(type);
   if (type === 'offers' || type === 'needs') {
-    await fetchAllData(context?.user?.fid);
+    try {
+      // Fid varsa gönder, yoksa undefined gönder (fetchAllData bunu karşılıyor)
+      const userFid = context?.user?.fid ? Number(context.user.fid) : undefined;
+      await fetchAllData(userFid);
+    } catch (error) {
+      console.error("Modal data refresh error:", error);
+    }
   }
 }} />
 

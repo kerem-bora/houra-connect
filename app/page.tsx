@@ -168,6 +168,13 @@ const fetchAllData = useCallback(async (fid?: number) => {
 }, []);
 
 
+// --- Format username ---
+
+const formatUsername = (name: string) => {
+  if (!name) return "";
+  return name.split('.')[0];
+};
+
   // --- SDK INIT ---
 
 useEffect(() => {
@@ -478,10 +485,6 @@ const handleDeleteNeed = async (id: string) => {
 
       </div>
 
-      <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '25px', marginLeft: '52px' }}>Time Economy</p>
-
-
-
       {isAboutOpen && (
 
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -581,7 +584,7 @@ const handleDeleteNeed = async (id: string) => {
 
                 <div>
 
-                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</p>
+                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(user.username)}</p>
 
                   <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.bio || "No offer description"}</p>
 
@@ -688,7 +691,7 @@ const handleDeleteNeed = async (id: string) => {
         {selectedMember.username ? selectedMember.username[0].toUpperCase() : "?"}
       </div>
 
-      <h2 style={{ margin: '0 0 5px 0', fontSize: '1.5rem' }}>@{selectedMember.username}</h2>
+      <h2 style={{ margin: '0 0 5px 0', fontSize: '1.5rem' }}>{formatUsername(selectedMember.username)}</h2>
   
      <p style={{ color: '#2563eb', fontWeight: 'bold', margin: '0 0 20px 0', fontSize: '0.9rem' }}>
   {/* Eğer .city yoksa .location alanına bak (fallback) */}
@@ -746,7 +749,7 @@ const handleDeleteNeed = async (id: string) => {
       return (
         <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{need.username}</span>
+            <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(need.username)}</span>
             {context?.user?.fid && Number(need.fid) === Number(context.user.fid) ? (
               <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
             ) : (
@@ -787,7 +790,7 @@ const handleDeleteNeed = async (id: string) => {
     offerResults.map((user: any, idx: number) => (
       <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</span>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(user.username)}</span>
         </div>
        
         <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>

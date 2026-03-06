@@ -84,6 +84,8 @@ export default function Home() {
 
   const [searchOfferResults, setSearchOfferResults] = useState<any[]>([]);
 
+  const [selectedMember, setSelectedMember] = useState<any>(null);
+
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
 
   const [needLocation, setNeedLocation] = useState("");
@@ -602,7 +604,7 @@ const handleDeleteNeed = async (id: string) => {
 
                 </div>
 
-                <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+                <button onClick={() => setSelectedMember(need)} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
 
               </div>
 
@@ -669,7 +671,7 @@ const handleDeleteNeed = async (id: string) => {
   disabled={!currentAddress}
   style={{ 
     padding: '12px', 
-    background: currentAddress ? '#333' : '#550000', // Cüzdan yoksa kırmızımsı/pasif
+    background: currentAddress ? '#333' : '#550000', 
     color: '#fff', 
     fontWeight: 'bold', 
     borderRadius: '10px', 
@@ -683,7 +685,50 @@ const handleDeleteNeed = async (id: string) => {
 
       </details>
 
+{selectedMember && (
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(15px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+    <div style={{ background: '#111', border: '1px solid #333', borderRadius: '28px', padding: '30px', width: '100%', maxWidth: '400px', textAlign: 'center', position: 'relative' }}>
+      
+      <button onClick={() => setSelectedMember(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#666', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
 
+       <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(45deg, #2563eb, #7e22ce)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', overflow: 'hidden' }}>
+        {selectedMember.pfp ? <img src={selectedMember.pfp} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : selectedMember.username[0].toUpperCase()}
+      </div>
+
+      <h2 style={{ margin: '0 0 5px 0' }}>@{selectedMember.username}</h2>
+      <p style={{ color: '#2563eb', fontWeight: 'bold', margin: '0 0 15px 0' }}>📍 {selectedMember.city || "Global"}</p>
+      
+      <div style={{ background: '#000', padding: '15px', borderRadius: '16px', marginBottom: '20px', border: '1px solid #222', textAlign: 'left' }}>
+        <p style={{ fontSize: '0.9rem', color: '#ccc', margin: 0, lineHeight: '1.4' }}>
+          {selectedMember.talents || selectedMember.bio || "No description provided."}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+       
+        <button 
+          onClick={() => {
+            setSelectedRecipient(selectedMember);
+            setSendAmount("1");
+            setSelectedMember(null);
+            setActiveModal(null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          style={{ width: '100%', padding: '14px', borderRadius: '14px', background: '#fff', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
+        >
+          SEND 1 HOURA ⏳
+        </button>
+
+               <button 
+          onClick={() => sdk.actions.viewProfile({ fid: Number(selectedMember.fid) })}
+          style={{ width: '100%', padding: '10px', borderRadius: '14px', background: 'transparent', color: '#666', fontWeight: '500', border: '1px solid #333', cursor: 'pointer', fontSize: '0.85rem' }}
+        >
+          View on Farcaster
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 {activeModal && (
   <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -706,7 +751,7 @@ const handleDeleteNeed = async (id: string) => {
                     <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
                     <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
                   </div>
-                  <button onClick={() => sdk.actions.viewProfile({ fid: Number(need.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>VIEW</button>
+                  <button onClick={() => setSelectedMember(need)} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>VIEW</button>
                 </div>
               </div>
             ))

@@ -82,6 +82,8 @@ export default function Home() {
 
   const [offerResults, setOfferResults] = useState<any[]>([]);
 
+  const [searchOfferResults, setSearchOfferResults] = useState<any[]>([]);
+
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
 
   const [needLocation, setNeedLocation] = useState("");
@@ -234,15 +236,21 @@ export default function Home() {
 
 
 useEffect(() => {
-  if (offerQuery.length <= 1) return; // Arama yapılmıyorsa mevcut listeye dokunma
+  if (offerQuery.length === 0) {
+    setSearchOfferResults([]);
+    return;
+  }
 
   const timer = setTimeout(async () => {
-    const res = await fetch(`/api/search?q=${offerQuery}`);
-    const data = await res.json();
-    setOfferResults(data.users || []);
+    if (offerQuery.length > 1) {
+      const res = await fetch(`/api/search?q=${offerQuery}`);
+      const data = await res.json();
+      setSearchOfferResults(data.users || []);
+    }
   }, 400);
+  
   return () => clearTimeout(timer);
-}, [offerQuery]);
+}, [offerQuery]); //
 
 
   // --- HANDLERS ---
@@ -578,11 +586,11 @@ const handleDeleteNeed = async (id: string) => {
 
         <input placeholder="Search offer, location, or user..." value={offerQuery} onChange={(e) => setOfferQuery(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#111', border: '1px solid #333', color: '#fff', boxSizing: 'border-box' }} />
 
-        {offerResults.length > 0 && (
+        {searchOfferResults.length > 0 && (
 
           <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-            {offerResults.map(user => (
+            {searchOfferResults.map(user => (
 
               <div key={user.fid} style={{ padding: '12px', background: '#111', borderRadius: '12px', border: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 

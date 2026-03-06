@@ -152,11 +152,11 @@ export default function Home() {
 
       setNeeds(needsData.needs || []);
 
-      const membersRes = await fetch('/api/search?q=');
+      const membersRes = await fetch('/api/profile');
 
       const membersData = await membersRes.json();
 
-      setOfferResults(membersData.users || []);
+      setOfferResults(membersData.profiles || membersData.users || []);
 
     } catch (e) { console.error("Fetch Error:", e); }
 
@@ -231,27 +231,16 @@ export default function Home() {
   }, [searchQuery]);
 
 
+useEffect(() => {
+  if (offerQuery.length <= 1) return; // Arama yapılmıyorsa mevcut listeye dokunma
 
-  useEffect(() => {
-
-    const timer = setTimeout(async () => {
-
-      if (offerQuery.length > 1) {
-
-        const res = await fetch(`/api/search?q=${offerQuery}`);
-
-        const data = await res.json();
-
-        setOfferResults(data.users || []);
-
-      } else setOfferResults([]);
-
-    }, 400);
-
-    return () => clearTimeout(timer);
-
-  }, [offerQuery]);
-
+  const timer = setTimeout(async () => {
+    const res = await fetch(`/api/search?q=${offerQuery}`);
+    const data = await res.json();
+    setOfferResults(data.users || []);
+  }, 400);
+  return () => clearTimeout(timer);
+}, [offerQuery]);
 
 
   // --- HANDLERS ---
@@ -714,22 +703,37 @@ const handleDeleteNeed = async (id: string) => {
           ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No needs found.</p>
         )}
 
-            {activeModal === 'offers' && (
-          offerResults.length > 0 ? (
-            offerResults.map((user: any, idx: number) => (
-              <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</span>
-                </div>
-                <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{user.talents || user.bio || "No offer description provided."}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {user.city || "Global"}</span>
-                  <button onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>VIEW</button>
-                </div>
-              </div>
-            ))
-          ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No offers found. Try searching for a talent on the home page.</p>
-        )}
+        {activeModal === 'offers' && (
+  offerResults.length > 0 ? (
+    offerResults.map((user: any, idx: number) => (
+      <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{user.username}</span>
+        </div>
+       
+        <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>
+          {user.bio || "No offer description provided."}
+        </p>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.7rem', color: '#666' }}>
+            📍 {user.city || "Global"}
+          </span>
+          <button 
+            onClick={() => sdk.actions.viewProfile({ fid: Number(user.fid) })} 
+            style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
+          >
+            VIEW PROFILE
+          </button>
+        </div>
+      </div>
+    ))
+  ) : (
+    <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>
+      No offers found in profiles.
+    </p>
+  )
+)}
 
         {activeModal === 'groups' && (
           <a href="https://warpcast.com/~/channel/houra" target="_blank" rel="noopener noreferrer" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', display: 'block', textAlign: 'center', fontWeight: 'bold' }}>

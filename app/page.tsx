@@ -758,8 +758,7 @@ const handleDeleteNeed = async (id: string) => {
                     <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
                     <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
                   </div>
-                  <button onClick={() => setSelectedMember(need)} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>VIEW PROFILE</button>
-                </div>
+               </div>
               </div>
             ))
           ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No needs found.</p>

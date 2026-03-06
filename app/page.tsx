@@ -587,7 +587,16 @@ const handleDeleteNeed = async (id: string) => {
 
                 </div>
 
-                <button onClick={() => setSelectedMember(user)} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+                <button onClick={() => setSelectedMember(user)} style={{
+  padding: '6px 12px',
+  borderRadius: '20px',
+  background: 'rgba(37, 99, 235, 0.1)', // Mavi rengin çok şeffaf hali
+  color: '#3b82f6',
+  fontSize: '0.7rem',
+  border: '1px solid rgba(37, 99, 235, 0.2)',
+  letterSpacing: '0.5px'
+}}
+>VIEW PROFILE</button>
 
               </div>
 
@@ -735,9 +744,14 @@ const handleDeleteNeed = async (id: string) => {
       const ownerProfile = offerResults.find(p => Number(p.fid) === Number(need.fid));
 
       return (
-        <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{need.username}</span>
+        <div key={idx} style={{ padding: '20px', 
+  background: '#161616', 
+  borderRadius: '24px', 
+  border: '1px solid #222',
+  marginBottom: '12px',
+  transition: 'transform 0.2s' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <span style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>@{need.username}</span>
             {context?.user?.fid && Number(need.fid) === Number(context.user.fid) ? (
               <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
             ) : (
@@ -745,18 +759,26 @@ const handleDeleteNeed = async (id: string) => {
               ownerProfile && (
                 <button 
                   onClick={() => setSelectedMember(ownerProfile)} 
-                  style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
+                  style={{
+  padding: '6px 12px',
+  borderRadius: '20px',
+  background: 'rgba(37, 99, 235, 0.1)', // Mavi rengin çok şeffaf hali
+  color: '#3b82f6',
+  fontSize: '0.7rem',
+  border: '1px solid rgba(37, 99, 235, 0.2)',
+  letterSpacing: '0.5px'
+}}
                 >
                   VIEW PROFILE
                 </button>
               )
             )}
           </div>
-          <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{need.text}</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ margin: '15px 0', fontSize: '0.9rem', color: '#eee', lineHeight: '1.4' }}>{need.text}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #222', paddingTop: '12px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-              <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
+              <span style={{ fontSize: '0.75rem', color: '#666' }}>📍 {need.location}</span>
+              <div style={{ background: 'linear-gradient(135deg, #2563eb, #7e22ce)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}> {need.price || "1"} ⏳
             </div>
           </div>
         </div>
@@ -783,7 +805,15 @@ const handleDeleteNeed = async (id: string) => {
           </span>
           <button 
             onClick={() => setSelectedMember(user)} 
-            style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
+           style={{
+  padding: '6px 12px',
+  borderRadius: '20px',
+  background: 'rgba(37, 99, 235, 0.1)', // Mavi rengin çok şeffaf hali
+  color: '#3b82f6',
+  fontSize: '0.7rem',
+  border: '1px solid rgba(37, 99, 235, 0.2)',
+  letterSpacing: '0.5px'
+}}
           >
             VIEW PROFILE
           </button>

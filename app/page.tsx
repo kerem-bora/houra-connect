@@ -499,6 +499,8 @@ const handleDeleteNeed = async (id: string) => {
 
       {/* 1. SEND PANEL */}
 
+     <p></p>
+
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
 
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>
@@ -517,7 +519,7 @@ const handleDeleteNeed = async (id: string) => {
 
                   <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
 
-                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>@{user.username}</p>
+                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>{formatUsername(user.username)}</p>
 
                   </div>
 

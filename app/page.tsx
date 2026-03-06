@@ -751,6 +751,11 @@ const handleDeleteNeed = async (id: string) => {
               <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{need.username}</span>
+ {context?.user?.fid && Number(need.fid) === Number(context.user.fid) && (
+
+                <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
+
+              )}
                 </div>
                 <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{need.text}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

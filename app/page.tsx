@@ -130,87 +130,70 @@ export default function Home() {
 
 
 
-  const fetchAllData = useCallback(async (fid?: number) => {
+const fetchAllData = useCallback(async (fid?: number) => {
+  try {
+   
+    const promises: Promise<any>[] = [
+      fetch('/api/needs').then(res => res.json()),
+      fetch('/api/profile').then(res => res.json())
+    ];
 
-    try {
+   
+    if (fid) {
+      promises.push(fetch(`/api/profile?fid=${fid}`).then(res => res.json()));
+    }
 
-      if (fid) {
 
-        const profRes = await fetch(`/api/profile?fid=${fid}`);
+    const results = await Promise.all(promises);
+    
+    const needsData = results[0];
+    const membersData = results[1];
+    const userData = results[2]; 
 
-        const profData = await profRes.json();
 
-        if (profData.profile) {
-
-          setLocation(profData.profile.city || "");
-
-          setOffer(profData.profile.talents || "");
-
-        }
-
-      }
-
-      const needsRes = await fetch('/api/needs');
-
-      const needsData = await needsRes.json();
-
-      setNeeds(needsData.needs || []);
-
-      const membersRes = await fetch('/api/profile');
-
-      const membersData = await membersRes.json();
-
-      console.log("Gelen Profil Verisi:", membersData);
-
+    if (needsData) setNeeds(needsData.needs || []);
+    if (membersData) {
+      console.log("Profile data:", membersData);
       setOfferResults(membersData.profiles || []);
+    }
+    
 
-    } catch (e) { console.error("Fetch Error:", e); }
-
-  }, []);
-
+    if (userData?.profile) {
+      setLocation(userData.profile.city || "");
+      setOffer(userData.profile.talents || "");
+    }
+  } catch (e) { 
+    console.error("Fetch Error:", e); 
+  }
+}, []);
 
 
   // --- SDK INIT ---
 
-  useEffect(() => {
+useEffect(() => {
+  const init = async () => {
+    try {
+      const ctx = await sdk.context;
+     
+      if (ctx?.user?.fid) {
+        setContext(ctx);
+        setIsFarcaster(true);
 
-    const init = async () => {
-
-      try {
-
-        const ctx = await sdk.context;
-
-        if (ctx?.user?.fid) {
-
-          setContext(ctx);
-
-          setIsFarcaster(true);
-
-          await fetchAllData(ctx.user.fid);
-
-        } else {
-
-          await fetchAllData();
-
-        }
-
-        sdk.actions.ready();
-
-      } catch (e) {
-
-        await fetchAllData();
-
-      } finally {
-
-        setIsSDKLoaded(true);
-
+        fetchAllData(ctx.user.fid);
+      } else {
+        fetchAllData();
       }
 
-    };
-
-    init();
-
-  }, [fetchAllData]);
+      sdk.actions.ready();
+    } catch (e) {
+      console.error("SDK Init Error:", e);
+      fetchAllData();
+    } finally {
+      setIsSDKLoaded(true);
+    }
+  };
+  init();
+}, [fetchAllData]);
 
 
 
@@ -230,7 +213,7 @@ export default function Home() {
 
       }
 
-    }, 400);
+    }, 200);
 
     return () => clearTimeout(timer);
 
@@ -571,7 +554,7 @@ const handleDeleteNeed = async (id: string) => {
   setActiveModal(type);
   if (type === 'offers' || type === 'needs') {
     try {
-      // Fid varsa gönder, yoksa undefined gönder (fetchAllData bunu karşılıyor)
+
       const userFid = context?.user?.fid ? Number(context.user.fid) : undefined;
       await fetchAllData(userFid);
     } catch (error) {

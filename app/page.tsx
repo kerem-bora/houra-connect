@@ -604,7 +604,7 @@ const handleDeleteNeed = async (id: string) => {
 
                 </div>
 
-                <button onClick={() => setSelectedMember(need)} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
+                <button onClick={() => setSelectedMember(user)} style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem' }}>VIEW PROFILE</button>
 
               </div>
 
@@ -698,16 +698,18 @@ const handleDeleteNeed = async (id: string) => {
 
       <h2 style={{ margin: '0 0 5px 0', fontSize: '1.5rem' }}>@{selectedMember.username}</h2>
   
-      <p style={{ color: '#2563eb', fontWeight: 'bold', margin: '0 0 20px 0', fontSize: '0.9rem' }}>
-        📍 {selectedMember.city || ""}
-      </p>
+     <p style={{ color: '#2563eb', fontWeight: 'bold', margin: '0 0 20px 0', fontSize: '0.9rem' }}>
+  {/* Eğer .city yoksa .location alanına bak (fallback) */}
+  📍 {selectedMember.city || selectedMember.location || "Somewhere"}
+</p>
      
-      <div style={{ background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '25px', border: '1px solid #222', textAlign: 'left' }}>
-        <label style={{ fontSize: '0.65rem', color: '#444', fontWeight: 'bold', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Houra Profile & Skills</label>
-        <p style={{ fontSize: '0.95rem', color: '#eee', margin: 0, lineHeight: '1.5' }}>
-          {selectedMember.talents || selectedMember.bio || "This member hasn't listed their skills yet."}
-        </p>
-      </div>
+<div style={{ background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '25px', border: '1px solid #222', textAlign: 'left' }}>
+  
+  <p style={{ fontSize: '0.95rem', color: '#eee', margin: 0, lineHeight: '1.5' }}>
+    {/* Eğer .bio yoksa .text alanına bak (fallback) */}
+    {selectedMember.bio || selectedMember.text || "No offers yet."}
+  </p>
+</div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
      
@@ -780,7 +782,7 @@ const handleDeleteNeed = async (id: string) => {
             📍 {user.city || "Global"}
           </span>
           <button 
-            onClick={() => setSelectedMember(need)} 
+            onClick={() => setSelectedMember(user)} 
             style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
           >
             VIEW PROFILE

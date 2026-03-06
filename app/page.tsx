@@ -778,7 +778,7 @@ const handleDeleteNeed = async (id: string) => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #222', paddingTop: '12px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '0.75rem', color: '#666' }}>📍 {need.location}</span>
-              <div style={{ background: 'linear-gradient(135deg, #2563eb, #7e22ce)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}> {need.price || "1"} ⏳
+              <span style={{ background: 'linear-gradient(135deg, #2563eb, #7e22ce)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}> {need.price || "1"} ⏳</span>
             </div>
           </div>
         </div>

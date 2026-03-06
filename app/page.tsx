@@ -156,7 +156,9 @@ export default function Home() {
 
       const membersData = await membersRes.json();
 
-      setOfferResults(membersData.profiles || membersData.users || []);
+      console.log("Gelen Profil Verisi:", membersData);
+
+      setOfferResults(membersData.profiles || []);
 
     } catch (e) { console.error("Fetch Error:", e); }
 

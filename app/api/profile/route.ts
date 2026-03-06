@@ -21,7 +21,7 @@ const ProfileSchema = z.object({
     .optional()
     .nullable()
     .transform(val => val?.trim().replace(/<[^>]*>/g, "") || null),
-  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), // Cüzdan formatı doğrulaması
+  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   token: z.string().optional(), 
 });
 
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // 1. Veri Formatı Kontrolü
+
     const validation = ProfileSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json({ error: "Geçersiz veri formatı" }, { status: 400 });
@@ -37,29 +37,24 @@ export async function POST(req: Request) {
 
     const { fid, username, city, talents, address } = validation.data;
 
-    // 2. GÜVENLİK KONTROLÜ (FID Eşleşmesi)
+
     const headerFid = req.headers.get("x-farcaster-fid");
     if (!headerFid || Number(headerFid) !== fid) {
-      return NextResponse.json({ error: "Kimlik doğrulanmadı (FID mismatch)" }, { status: 401 });
+      return NextResponse.json({ error: "Profile is not verified (FID mismatch)" }, { status: 401 });
     }
 
-    // 3. GÜVENLİK KONTROLÜ (Cüzdan Kilidi)
-    // Mevcut bir profil var mı kontrol et
     const { data: existingProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('wallet_address')
       .eq('fid', fid)
       .maybeSingle();
 
-    // Eğer profil zaten varsa ve gelen cüzdan adresi DB'dekiyle tutmuyorsa işlemi reddet
     if (existingProfile && existingProfile.wallet_address.toLowerCase() !== address.toLowerCase()) {
       return NextResponse.json({ 
-        error: "Bu profil başka bir cüzdan adresine kilitli. Yetkisiz erişim!" 
+        error: "Denied!" 
       }, { status: 403 });
     }
 
-    // 4. Veritabanına Yazma (Upsert)
-    // wallet_address'i .toLowerCase() ile kaydederek tutarlılık sağlıyoruz
     const { error: dbError } = await supabase
       .from('profiles')
       .upsert({
@@ -76,7 +71,7 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Profile POST Error:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -84,13 +79,23 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const fid = searchParams.get("fid");
-    if (!fid) return NextResponse.json({ error: "FID eksik" }, { status: 400 });
+
+    // Eğer FID yoksa, tüm teklifleri (profiles) getir
+    if (!fid) {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return NextResponse.json({ profiles });
+    }
 
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('fid', Number(fid))
-      .maybeSingle(); // single() yerine maybeSingle() hata yönetimini kolaylaştırır
+      .maybeSingle(); 
 
     if (error) throw error;
     
@@ -99,6 +104,6 @@ export async function GET(req: Request) {
     });
   } catch (error: any) {
     console.error("Profile GET Error:", error);
-    return NextResponse.json({ error: "Veri çekilemedi" }, { status: 500 });
+    return NextResponse.json({ error: "Data error" }, { status: 500 });
   }
 }

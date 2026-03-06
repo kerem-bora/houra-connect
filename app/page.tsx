@@ -729,28 +729,41 @@ const handleDeleteNeed = async (id: string) => {
       <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         
         {activeModal === 'needs' && (
-          needs.length > 0 ? (
-            needs.map((need: any, idx: number) => (
-              <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{need.username}</span>
- {context?.user?.fid && Number(need.fid) === Number(context.user.fid) && (
+  needs.length > 0 ? (
+    needs.map((need: any, idx: number) => {
 
-                <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
+      const ownerProfile = offerResults.find(p => Number(p.fid) === Number(need.fid));
 
-              )}
-                </div>
-                <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{need.text}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-                    <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
-                  </div>
-               </div>
-              </div>
-            ))
-          ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No needs found.</p>
-        )}
+      return (
+        <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>@{need.username}</span>
+            {context?.user?.fid && Number(need.fid) === Number(context.user.fid) ? (
+              <button onClick={() => handleDeleteNeed(need.id)} style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
+            ) : (
+          
+              ownerProfile && (
+                <button 
+                  onClick={() => setSelectedMember(ownerProfile)} 
+                  style={{ color: '#2563eb', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
+                >
+                  VIEW PROFILE
+                </button>
+              )
+            )}
+          </div>
+          <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{need.text}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+              <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
+            </div>
+          </div>
+        </div>
+      );
+    })
+  ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No needs found.</p>
+)}
 
         {activeModal === 'offers' && (
   offerResults.length > 0 ? (

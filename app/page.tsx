@@ -375,19 +375,26 @@ const handleDeleteNeed = async (id: string) => {
           "x-farcaster-fid": context.user.fid.toString() 
         },
         body: JSON.stringify({
-          address: currentAddress.toLowerCase() // Sadece adres yeterli
+          address: currentAddress.toLowerCase() 
         })
       });
 
-      if (res.ok) {
+      const data = await res.json(); 
+
+        if (res.ok && data.success) {
         setNeeds(prev => prev.filter(n => n.id !== id));
         setStatus("Deleted! ✅");
-        setTimeout(() => setStatus(""), 2000);
+    
+        await fetchAllData(context.user.fid); 
       } else {
-        const err = await res.json();
-        setStatus(err.error || "Delete failed");
+    
+        setStatus(`Error: ${data.error || "Delete failed"}`);
       }
-    } catch (e) { setStatus("Error deleting"); }
+    } catch (e) { 
+      setStatus("Error deleting"); 
+    } finally {
+      setTimeout(() => setStatus(""), 3000);
+    }
   };
 
   // --- COMPONENTS ---

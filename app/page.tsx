@@ -15,6 +15,9 @@ import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
 import { createClient } from '@supabase/supabase-js';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // --- CONFIG ---
 
@@ -251,22 +254,35 @@ useEffect(() => {
 const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
 const fetchLeaderboardData = useCallback(async () => {
-  const { data, error } = await supabase
-    .from('leaderboard')
-    .select(`
-      tx_count,
-      rank,
-      wallet_address,
-      profiles:wallet_address (
-        username
-      )
-    `)
-    .order('rank', { ascending: true });
+  try {
+    // Veri çekme işlemi
+    const { data, error } = await supabase
+      .from('leaderboard')
+      .select(`
+        tx_count,
+        rank,
+        wallet_address,
+        profiles:wallet_address (
+          username
+        )
+      `)
+      .order('rank', { ascending: true });
 
-  if (error) {
-    console.error("Fetch Error:", error.message);
-  } else {
-    setLeaderboard(data || []);
+    if (error) {
+      console.error("Supabase Fetch Error:", error.message);
+      
+      // Hata durumunda (örneğin join hatası) ham veriyi çekmeyi dene
+      const { data: fallbackData } = await supabase
+        .from('leaderboard')
+        .select('tx_count, rank, wallet_address')
+        .order('rank', { ascending: true });
+      
+      if (fallbackData) setLeaderboard(fallbackData);
+    } else {
+      setLeaderboard(data || []);
+    }
+  } catch (err: any) {
+    console.error("Unexpected Error:", err.message);
   }
 }, []);
 

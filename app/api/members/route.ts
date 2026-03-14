@@ -8,26 +8,38 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    const { data, error } = await supabase
+    // 1. Leadership table
+    const { data: leaderboard, error: lError } = await supabase
       .from('leaderboard')
-      .select(`
-        tx_count,
-        rank,
-        wallet_address,
-        profiles!inner (
-          username
-        )
-      `)
+      .select('tx_count, rank, wallet_address')
       .order('rank', { ascending: true });
 
-    if (error) {
+    if (lError) throw lError;
 
-      console.error("Supabase Error:", error);
-      throw error;
-    }
-    
-    return NextResponse.json(data);
+    // 2. Profiles
+    const { data: profiles, error: pError } = await supabase
+      .from('profiles')
+      .select('username, address'); 
+
+    if (pError) throw pError;
+
+    // 3. Matching
+    const mergedData = leaderboard.map(entry => {
+   
+      const userProfile = profiles?.find(p => 
+        (p.address || "").toLowerCase() === (entry.wallet_address || "").toLowerCase()
+      );
+      
+      return {
+        ...entry,
+       
+        profiles: userProfile ? { username: userProfile.username } : null
+      };
+    });
+
+    return NextResponse.json(mergedData);
   } catch (error: any) {
+    console.error("Manual Merge Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

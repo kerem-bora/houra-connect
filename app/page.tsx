@@ -13,6 +13,12 @@ import { useSendCalls } from 'wagmi/experimental';
 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 
 // --- CONFIG ---
@@ -31,7 +37,7 @@ const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
   const menuItems = [
     { id: 'needs', label: 'Needs', color: '#2563eb' },
     { id: 'offers', label: 'Offers', color: '#2563eb' },
-    { id: 'active', label: 'Members', color: '#2563eb' },
+    { id: 'members', label: 'Members', color: '#2563eb' },
     { id: 'groups', label: 'Communities', color: '#2563eb' },
   ];
 

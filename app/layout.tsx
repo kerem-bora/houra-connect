@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Providers } from "./providers";
 
-// Farcaster Frame v2 spesifikasyonlarını tip güvenli hale getirelim
 const frameMetadata = {
   version: "next",
   imageUrl: "https://houra.vercel.app/splash.png",
@@ -38,8 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* Next.js 15'te body stillerini global.css yerine burada vermek 
-          hydration mismatch riskini artırabilir ama basit yapıda sorun çıkarmaz */}
+      {/* ... */}
       <body style={{ margin: 0, padding: 0, backgroundColor: '#000000', color: '#ffffff' }}>
         <Providers>
           {children}

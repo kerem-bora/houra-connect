@@ -8,38 +8,42 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    // 1. Leadership table
-    const { data: leaderboard, error: lError } = await supabase
+    // 1. Leaderboard
+    const { data: lbData, error: lbError } = await supabase
       .from('leaderboard')
       .select('tx_count, rank, wallet_address')
       .order('rank', { ascending: true });
 
-    if (lError) throw lError;
+    if (lbError) throw lbError;
 
     // 2. Profiles
-    const { data: profiles, error: pError } = await supabase
+    const { data: profData, error: profError } = await supabase
       .from('profiles')
-      .select('username, address'); 
+      .select('username, wallet_address'); 
 
-    if (pError) throw pError;
+    if (profError) throw profError;
+
+    // DEBUG LOGS
+    console.log("LB Count:", lbData?.length);
+    console.log("Prof Count:", profData?.length);
 
     // 3. Matching
-    const mergedData = leaderboard.map(entry => {
-   
-      const userProfile = profiles?.find(p => 
-        (p.address || "").toLowerCase() === (entry.wallet_address || "").toLowerCase()
+    const results = (lbData || []).map(entry => {
+      const p = (profData || []).find(
+        u => String(u.wallet_address).toLowerCase() === String(entry.wallet_address).toLowerCase()
       );
       
       return {
-        ...entry,
-       
-        profiles: userProfile ? { username: userProfile.username } : null
+        tx_count: entry.tx_count,
+        rank: entry.rank,
+        wallet_address: entry.wallet_address,
+        profiles: p ? { username: p.username } : null
       };
     });
 
-    return NextResponse.json(mergedData);
+    return NextResponse.json(results);
   } catch (error: any) {
-    console.error("Manual Merge Error:", error.message);
+    console.error("ERROR:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

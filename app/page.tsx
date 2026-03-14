@@ -245,6 +245,37 @@ useEffect(() => {
 }, [offerQuery]); //
 
 
+// --- Active members ---
+
+const [leaderboard, setLeaderboard] = useState<any[]>([]);
+
+const fetchLeaderboardData = useCallback(async () => {
+  const { data, error } = await supabase
+    .from('leaderboard')
+    .select(`
+      tx_count,
+      rank,
+      wallet_address,
+      profiles:wallet_address (
+        username
+      )
+    `)
+    .order('rank', { ascending: true });
+
+  if (error) {
+    console.error("Fetch Error:", error.message);
+  } else {
+    setLeaderboard(data || []);
+  }
+}, []);
+
+useEffect(() => {
+  if (activeModal === 'members') {
+    fetchLeaderboardData();
+  }
+}, [activeModal, fetchLeaderboardData]);
+
+
   // --- HANDLERS ---
 
   const handleTransfer = useCallback(async () => {
@@ -848,11 +879,51 @@ const handleDeleteNeed = async (id: string) => {
           </a>
         )}
 
-              {activeModal === 'active' && (
-          <p style={{ color: '#ccc', fontSize: '0.9rem', textAlign: 'center' }}>coming soon...</p>
+              {activeModal === 'members' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        {topMembers.map((member, index) => (
+      <div key={member.wallet_address} style={{
+        padding: '12px',
+        background: '#000',
+        borderRadius: '12px',
+        border: index === 0 ? '1px solid #3b82f6' : '1px solid #222',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'relative'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ 
+            fontSize: '0.8rem', 
+            fontWeight: 'bold',
+            color: index === 0 ? '#3b82f6' : '#666'
+          }}>
+            #{index + 1}
+          </span>
+          <div>
+            <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>
+              @{member.username || 'Anonymous'}
+            </div>
+            <div style={{ color: '#555', fontSize: '0.7rem' }}>
+              {member.tx_count} Houra exchanges (Last 30 days)
+            </div>
+          </div>
+        </div>
+        
+        {index === 0 && (
+          <span style={{ 
+            fontSize: '0.6rem', 
+            background: 'rgba(59, 130, 246, 0.2)', 
+            color: '#3b82f6', 
+            padding: '2px 8px', 
+            borderRadius: '10px',
+            border: '1px solid #3b82f6'
+          }}>
+            Most active member
+          </span>
         )}
       </div>
-    </div>
+    ))}
   </div>
 )}
 

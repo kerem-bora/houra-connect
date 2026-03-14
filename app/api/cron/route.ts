@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       if (timestamp >= thirtyDaysAgo) {
         if (
           fromAddress !== HOURA_TOKEN_ADDRESS.toLowerCase() && 
+          fromAddress !== "0x0000000000000000000000000000000000000000"
                  ) {
           activityMap[fromAddress] = (activityMap[fromAddress] || 0) + 1;
         }

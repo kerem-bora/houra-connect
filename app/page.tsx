@@ -828,13 +828,16 @@ const handleDeleteNeed = async (id: string) => {
 
         {activeModal === 'members' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+<h3 style={{ marginTop: 0, color: '#2563eb' }}>
+  {activeModal === 'members' ? 'Active members' : activeModal}
+</h3>
             {leaderboard.length > 0 ? (
               leaderboard.map((member, index) => (
                 <div key={member.wallet_address} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: index === 0 ? '1px solid #3b82f6' : '1px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: index === 0 ? '#3b82f6' : '#666' }}>#{index + 1}</span>
                     <div>
-                      <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>@{member.profiles?.username || member.username || 'Anonymous'}</div>
+                      <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{member.profiles?.username || member.username || 'Anonymous'}</div>
                       <div style={{ color: '#555', fontSize: '0.7rem' }}>{member.tx_count} Houra exchanges</div>
                     </div>
                   </div>

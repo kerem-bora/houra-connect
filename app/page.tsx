@@ -13,11 +13,6 @@ import { useSendCalls } from 'wagmi/experimental';
 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // --- CONFIG ---
 
@@ -254,37 +249,17 @@ useEffect(() => {
 const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
 const fetchLeaderboardData = useCallback(async () => {
-  
-  if (!supabase) return;
-
   try {
-    const { data, error } = await supabase
-      .from('leaderboard')
-      .select(`
-        tx_count,
-        rank,
-        wallet_address,
-        profiles:wallet_address (
-          username
-        )
-      `)
-      .order('rank', { ascending: true });
-
-    if (error) {
-      console.error("Supabase Fetch Error:", error.message);
-      
-      // Fallback
-      const { data: fallbackData } = await supabase
-        .from('leaderboard')
-        .select('tx_count, rank, wallet_address')
-        .order('rank', { ascending: true });
-      
-      if (fallbackData) setLeaderboard(fallbackData);
+    const response = await fetch('/api/members');
+    const data = await response.json();
+    
+    if (response.ok) {
+      setLeaderboard(data);
     } else {
-      setLeaderboard(data || []);
+      console.error("Leaderboard fetch error:", data.error);
     }
-  } catch (err: any) {
-    console.error("Unexpected Error:", err.message);
+  } catch (err) {
+    console.error("Network error:", err);
   }
 }, []);
 

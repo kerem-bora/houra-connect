@@ -10,14 +10,7 @@ export async function GET() {
   try {
     const { data, error } = await supabase
       .from('leaderboard')
-      .select(`
-        tx_count,
-        rank,
-        wallet_address,
-        profiles:wallet_address (
-          username
-        )
-      `)
+      .select(`*`)
       .order('rank', { ascending: true });
 
     if (error) throw error;

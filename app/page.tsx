@@ -254,8 +254,10 @@ useEffect(() => {
 const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
 const fetchLeaderboardData = useCallback(async () => {
+  
+  if (!supabase) return;
+
   try {
-    // Veri çekme işlemi
     const { data, error } = await supabase
       .from('leaderboard')
       .select(`
@@ -271,7 +273,7 @@ const fetchLeaderboardData = useCallback(async () => {
     if (error) {
       console.error("Supabase Fetch Error:", error.message);
       
-      // Hata durumunda (örneğin join hatası) ham veriyi çekmeyi dene
+      // Fallback
       const { data: fallbackData } = await supabase
         .from('leaderboard')
         .select('tx_count, rank, wallet_address')

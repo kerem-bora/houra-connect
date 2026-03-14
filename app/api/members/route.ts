@@ -14,14 +14,18 @@ export async function GET() {
         tx_count,
         rank,
         wallet_address,
-        profiles:profiles!inner (
+        profiles!inner (
           username
         )
       `)
       .order('rank', { ascending: true });
 
+    if (error) {
 
-    if (error) throw error;
+      console.error("Supabase Error:", error);
+      throw error;
+    }
+    
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -838,8 +838,7 @@ const handleDeleteNeed = async (id: string) => {
                       <div style={{ color: '#555', fontSize: '0.7rem' }}>{member.tx_count} Houra exchanges</div>
                     </div>
                   </div>
-                  {index === 0 && 🟣}
-                </div>
+                  </div>
               ))
             ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No activity found.</p>}
           </div>

@@ -19,8 +19,8 @@ export async function GET(request: Request) {
 
   try {
     // 2. Basescan
-    const basescanUrl = `https://api.basescan.org/api?module=account&action=tokentx&contractaddress=${HOURA_TOKEN_ADDRESS}&page=1&offset=1000&sort=desc&apikey=${BASESCAN_API_KEY}`;
-    
+const basescanUrl = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=tokentx&contractaddress=${HOURA_TOKEN_ADDRESS}&page=1&offset=1000&sort=desc&apikey=${BASESCAN_API_KEY}`;
+
     const response = await fetch(basescanUrl);
     const data = await response.json();
 

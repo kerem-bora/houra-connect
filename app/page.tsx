@@ -781,181 +781,87 @@ const handleDeleteNeed = async (id: string) => {
       <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         
         {activeModal === 'needs' && (
-  needs.length > 0 ? (
-    needs.map((need: any, idx: number) => {
-
-      const ownerProfile = offerResults.find(p => Number(p.fid) === Number(need.fid));
-
-      return (
-        <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(need.username)}</span>
-            {context?.user?.fid && Number(need.fid) === Number(context.user.fid) ? (
-              <button onClick={() => handleDeleteNeed(need.id)} style={{
-  padding: '6px 12px',
-  borderRadius: '20px',
-  background: 'rgba(220, 38, 38, 0.1)',
-  color: '#ef4444',                    
-  fontSize: '0.7rem',
-  border: '1px solid rgba(220, 38, 38, 0.2)',
-  letterSpacing: '0.5px'
-}}>Delete</button>
-            ) : (
-          
-              ownerProfile && (
-                <button 
-                  onClick={() => setSelectedMember(ownerProfile)} 
-                  style={{
-  padding: '6px 12px',
-  borderRadius: '20px',
-  background: 'rgba(37, 99, 235, 0.1)', // Mavi rengin çok şeffaf hali
-  color: '#3b82f6',
-  fontSize: '0.7rem',
-  border: '1px solid rgba(37, 99, 235, 0.2)',
-  letterSpacing: '0.5px'
-}}
-                >
-                  VIEW PROFILE
-                </button>
-              )
-            )}
-          </div>
-          <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{need.text}</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
-              <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
-            </div>
-          </div>
-        </div>
-      );
-    })
-  ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No needs found.</p>
-)}
+          needs.length > 0 ? (
+            needs.map((need: any, idx: number) => {
+              const ownerProfile = offerResults.find(p => Number(p.fid) === Number(need.fid));
+              return (
+                <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(need.username)}</span>
+                    {context?.user?.fid && Number(need.fid) === Number(context.user.fid) ? (
+                      <button onClick={() => handleDeleteNeed(need.id)} style={{ padding: '6px 12px', borderRadius: '20px', background: 'rgba(220, 38, 38, 0.1)', color: '#ef4444', fontSize: '0.7rem', border: '1px solid rgba(220, 38, 38, 0.2)', letterSpacing: '0.5px' }}>Delete</button>
+                    ) : (
+                      ownerProfile && (
+                        <button onClick={() => setSelectedMember(ownerProfile)} style={{ padding: '6px 12px', borderRadius: '20px', background: 'rgba(37, 99, 235, 0.1)', color: '#3b82f6', fontSize: '0.7rem', border: '1px solid rgba(37, 99, 235, 0.2)', letterSpacing: '0.5px' }}>VIEW PROFILE</button>
+                      )
+                    )}
+                  </div>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{need.text}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {need.location}</span>
+                      <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.8rem' }}>⏳ {need.price || "1"} Houra</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No needs found.</p>
+        )}
 
         {activeModal === 'offers' && (
-  offerResults.length > 0 ? (
-    offerResults.map((user: any, idx: number) => (
-      <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(user.username)}</span>
-        </div>
-       
-        <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>
-          {user.bio || "No offer description provided."}
-        </p>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.7rem', color: '#666' }}>
-            📍 {user.city || "Global"}
-          </span>
-          <button 
-            onClick={() => setSelectedMember(user)} 
-           style={{
-  padding: '6px 12px',
-  borderRadius: '20px',
-  background: 'rgba(37, 99, 235, 0.1)', // Mavi rengin çok şeffaf hali
-  color: '#3b82f6',
-  fontSize: '0.7rem',
-  border: '1px solid rgba(37, 99, 235, 0.2)',
-  letterSpacing: '0.5px'
-}}
-          >
-            VIEW PROFILE
-          </button>
-        </div>
-      </div>
-    ))
-  ) : (
-    <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>
-      No offers found in profiles.
-    </p>
-  )
-)}
-
-       {activeModal === 'groups' && (
-  <a 
-    href="https://houra.vercel.app" 
-    target="_blank" 
-    rel="noopener noreferrer" 
-    style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', display: 'block', textAlign: 'center', fontWeight: 'bold' }}
-  >
-    🟣 Houra Farcaster Channel
-  </a>
-)}
-
-{activeModal === 'members' && (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-    {leaderboard.length > 0 ? (
-      leaderboard.map((member, index) => (
-        <div key={member.wallet_address} style={{
-          padding: '12px',
-          background: '#000',
-          borderRadius: '12px',
-          border: index === 0 ? '1px solid #3b82f6' : '1px solid #222',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'relative'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ 
-              fontSize: '0.8rem', 
-              fontWeight: 'bold',
-              color: index === 0 ? '#3b82f6' : '#666'
-            }}>
-              #{index + 1}
-            </span>
-            <div>
-              <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                @{member.profiles?.username || member.username || 'Anonymous'}
+          offerResults.length > 0 ? (
+            offerResults.map((user: any, idx: number) => (
+              <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(user.username)}</span>
+                </div>
+                <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{user.bio || "No offer description provided."}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#666' }}>📍 {user.city || "Global"}</span>
+                  <button onClick={() => setSelectedMember(user)} style={{ padding: '6px 12px', borderRadius: '20px', background: 'rgba(37, 99, 235, 0.1)', color: '#3b82f6', fontSize: '0.7rem', border: '1px solid rgba(37, 99, 235, 0.2)', letterSpacing: '0.5px' }}>VIEW PROFILE</button>
+                </div>
               </div>
-              <div style={{ color: '#555', fontSize: '0.7rem' }}>
-                {member.tx_count} Houra exchanges (Last 30 days)
-              </div>
-            </div>
+            ))
+          ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No offers found.</p>
+        )}
+
+        {activeModal === 'groups' && (
+          <a href="https://warpcast.com/~/channel/houra" target="_blank" rel="noopener noreferrer" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', display: 'block', textAlign: 'center', fontWeight: 'bold' }}>
+            🟣 Houra Farcaster Channel
+          </a>
+        )}
+
+        {activeModal === 'members' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {leaderboard.length > 0 ? (
+              leaderboard.map((member, index) => (
+                <div key={member.wallet_address} style={{ padding: '12px', background: '#000', borderRadius: '12px', border: index === 0 ? '1px solid #3b82f6' : '1px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: index === 0 ? '#3b82f6' : '#666' }}>#{index + 1}</span>
+                    <div>
+                      <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>@{member.profiles?.username || member.username || 'Anonymous'}</div>
+                      <div style={{ color: '#555', fontSize: '0.7rem' }}>{member.tx_count} Houra exchanges</div>
+                    </div>
+                  </div>
+                  {index === 0 && <span style={{ fontSize: '0.6rem', background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', padding: '2px 8px', borderRadius: '10px', border: '1px solid #3b82f6' }}>LDR</span>}
+                </div>
+              ))
+            ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No activity found.</p>}
           </div>
-          
-          {index === 0 && (
-            <span style={{ 
-              fontSize: '0.6rem', 
-              background: 'rgba(59, 130, 246, 0.2)', 
-              color: '#3b82f6', 
-              padding: '2px 8px', 
-              borderRadius: '10px',
-              border: '1px solid #3b82f6'
-            }}>
-              Most active member
-            </span>
-          )}
-        </div>
-      ))
-    ) : (
-      <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>
-        No activity found yet.
-      </p>
-    )}
+        )}
+      </div>
+    </div>
   </div>
 )}
 
-<p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>
-  Houra Time Economy - 2026
-</p>
-
-
-
       {status && (
-
         <div style={{ position: 'fixed', bottom: '20px', left: '20px', right: '20px', padding: '15px', background: '#000', border: '1px solid #2563eb', borderRadius: '15px', textAlign: 'center', zIndex: 3000 }}>
-
           {status}
-
         </div>
-
       )}
 
+      <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
     </div>
-
   );
-
 }

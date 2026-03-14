@@ -30,7 +30,7 @@ const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
   const menuItems = [
     { id: 'needs', label: 'Needs', color: '#2563eb' },
     { id: 'offers', label: 'Offers', color: '#2563eb' },
-    { id: 'members', label: 'Members', color: '#2563eb' },
+    { id: 'members', label: 'Active Members', color: '#2563eb' },
     { id: 'groups', label: 'Communities', color: '#2563eb' },
   ];
 
@@ -838,7 +838,7 @@ const handleDeleteNeed = async (id: string) => {
                       <div style={{ color: '#555', fontSize: '0.7rem' }}>{member.tx_count} Houra exchanges</div>
                     </div>
                   </div>
-                  {index === 0 && <span style={{ fontSize: '0.6rem', background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', padding: '2px 8px', borderRadius: '10px', border: '1px solid #3b82f6' }}>LDR</span>}
+                  {index === 0 && 🟣}
                 </div>
               ))
             ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No activity found.</p>}

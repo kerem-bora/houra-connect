@@ -11,20 +11,19 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
 
-    // Boş veya çok kısa aramaları engelle
+    // Block empty or too short queries
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ users: [] });
     }
 
-    // Arama terimini temizle
     const searchTerm = query.trim();
 
-    // Supabase Sorgusu: 
-    // Username, City (Location) veya Bio (Offer) içinde büyük/küçük harf duyarsız arama yapar.
+    // Supabase Query: 
+    // Now searches across username, nick, city, and bio using case-insensitive ilike
     const { data, error } = await supabase
       .from('profiles')
-      .select('fid, username, avatar_url, city, bio, wallet_address')
-      .or(`username.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
+      .select('fid, username, nick, avatar_url, city, bio, wallet_address')
+      .or(`username.ilike.%${searchTerm}%,nick.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
       .limit(10);
 
     if (error) {
@@ -32,7 +31,13 @@ export async function GET(req: Request) {
       throw error;
     }
 
-    return NextResponse.json({ users: data || [] });
+    // Format results to include the display_name logic (nick priority)
+    const formattedUsers = (data || []).map(user => ({
+      ...user,
+      display_name: user.nick || user.username // Fallback to username if nick is null
+    }));
+
+    return NextResponse.json({ users: formattedUsers });
   } catch (error: any) {
     console.error("Search API Failure:", error);
     return NextResponse.json(

@@ -97,7 +97,7 @@ export default function Home() {
 
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
-
+  const [nickname, setNickname] = useState(""); 
 
   const { address: currentAddress } = useAccount();
 
@@ -160,6 +160,7 @@ const fetchAllData = useCallback(async (fid?: number) => {
     if (userData?.profile) {
       setLocation(userData.profile.city || "");
       setOffer(userData.profile.talents || "");
+      setNickname(userData.profile.nick || "");
     }
   } catch (e) { 
     console.error("Fetch Error:", e); 
@@ -169,9 +170,12 @@ const fetchAllData = useCallback(async (fid?: number) => {
 
 // --- Format username ---
 
-const formatUsername = (name: string) => {
-  if (!name) return "";
-  return name.split('.')[0];
+const formatUsername = (user: any) => {
+  if (!user) return "Anonymous";
+
+  const nameToDisplay = user.display_name || user.nick || user.username || "Anonymous";
+
+  return nameToDisplay;
 };
 
   // --- SDK INIT ---
@@ -351,7 +355,7 @@ const handleAddNeed = async () => {
         setTimeout(() => setStatus(""), 2000);
       } else {
         const data = await res.json();
-        // Backend'den gelen "Profile not found" uyarısını burada kullanıcı görecek
+      
         setStatus(`Error: ${data.error || "Failed"}`); 
       }
     } catch (e: any) { setStatus(`Error: ${e.message}`); }
@@ -374,10 +378,11 @@ const handleSaveProfile = async () => {
         }, 
         body: JSON.stringify({ 
           fid: Number(context.user.fid), 
-          username: context.user.username, 
+          username: context.user.username,
+          nick: nickname,
           city: location, 
           talents: offer, 
-          address: currentAddress.toLowerCase() // Küçük harfe zorla
+          address: currentAddress.toLowerCase() 
         }) 
       });
       
@@ -557,7 +562,7 @@ const handleDeleteNeed = async (id: string) => {
 
                   <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
 
-                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>{formatUsername(user.username)}</p>
+                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>{formatUsername(user)}</p>
 
                   </div>
 
@@ -573,7 +578,7 @@ const handleDeleteNeed = async (id: string) => {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.2)', padding: '10px 15px', borderRadius: '12px' }}>
 
-            <span style={{ fontWeight: 'bold' }}>@{selectedRecipient.username}</span>
+            <span style={{ fontWeight: 'bold' }}>{formatUsername(selectedRecipient)}</span>
 
             <button onClick={() => setSelectedRecipient(null)} style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', textDecoration: 'underline' }}>Change</button>
 
@@ -731,7 +736,7 @@ const handleDeleteNeed = async (id: string) => {
         {selectedMember.username ? selectedMember.username[0].toUpperCase() : "?"}
       </div>
 
-      <h2 style={{ margin: '0 0 5px 0', fontSize: '1.5rem' }}>{formatUsername(selectedMember.username)}</h2>
+      <h2 style={{ margin: '0 0 5px 0', fontSize: '1.5rem' }}>{formatUsername(selectedMember)}</h2>
   
      <p style={{ color: '#2563eb', fontWeight: 'bold', margin: '0 0 20px 0', fontSize: '0.9rem' }}>
   {/* Eğer .city yoksa .location alanına bak (fallback) */}
@@ -787,7 +792,7 @@ const handleDeleteNeed = async (id: string) => {
               return (
                 <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(need.username)}</span>
+                    <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(ownerProfile || need)}</span>
                     {context?.user?.fid && Number(need.fid) === Number(context.user.fid) ? (
                       <button onClick={() => handleDeleteNeed(need.id)} style={{ padding: '6px 12px', borderRadius: '20px', background: 'rgba(220, 38, 38, 0.1)', color: '#ef4444', fontSize: '0.7rem', border: '1px solid rgba(220, 38, 38, 0.2)', letterSpacing: '0.5px' }}>Delete</button>
                     ) : (
@@ -814,7 +819,7 @@ const handleDeleteNeed = async (id: string) => {
             offerResults.map((user: any, idx: number) => (
               <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(user.username)}</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(user)}</span>
                 </div>
                 <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#ccc' }}>{user.bio || "No offer description provided."}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -840,9 +845,8 @@ const handleDeleteNeed = async (id: string) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: index === 0 ? '#3b82f6' : '#666' }}>#{index + 1}</span>
             <div>
-              {/* BURAYI GÜNCELLEDİK: formatUsername fonksiyonunu ekledik */}
-              <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                {formatUsername(member.profiles?.username || member.username || 'Anonymous')}
+                <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                {formatUsername(member.profiles || member)}
               </div>
               <div style={{ color: '#555', fontSize: '0.7rem' }}>{member.tx_count} Houra exchanges</div>
             </div>

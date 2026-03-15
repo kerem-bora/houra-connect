@@ -696,34 +696,48 @@ const handleDeleteNeed = async (id: string) => {
 
       {/* 4. PROFILE SETTINGS */}
 
-      <details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
+<details style={{ background: '#111', padding: '12px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #222' }}>
+  <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+    
+    {/* NICKNAME INPUT - Yeni eklenen alan */}
+    <input 
+      placeholder="Nickname (e.g. Master Builder)" 
+      value={nickname} 
+      onChange={(e) => setNickname(e.target.value)} 
+      style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} 
+    />
 
-        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
+    <input 
+      placeholder="Location" 
+      value={location} 
+      onChange={(e) => setLocation(e.target.value)} 
+      style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} 
+    />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+    <textarea 
+      placeholder="What do you offer?" 
+      value={offer} 
+      onChange={(e) => setOffer(e.target.value)} 
+      style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} 
+    />
 
-          <input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} />
-
-          <textarea placeholder="What do you offer?" value={offer} onChange={(e) => setOffer(e.target.value)} style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px', height: '60px' }} />
-
-          <button 
-  onClick={handleSaveProfile} 
-  disabled={!currentAddress}
-  style={{ 
-    padding: '12px', 
-    background: currentAddress ? '#333' : '#550000', 
-    color: '#fff', 
-    fontWeight: 'bold', 
-    borderRadius: '10px', 
-    border: 'none' 
-  }}
->
-  {currentAddress ? "SAVE PROFILE" : "Please Connect Base/Farcaster Wallet First"}
-</button>
-
-        </div>
-
-      </details>
+    <button 
+      onClick={handleSaveProfile} 
+      disabled={!currentAddress}
+      style={{ 
+        padding: '12px', 
+        background: currentAddress ? '#333' : '#550000', 
+        color: '#fff', 
+        fontWeight: 'bold', 
+        borderRadius: '10px', 
+        border: 'none' 
+      }}
+    >
+      {currentAddress ? "SAVE PROFILE" : "Please Connect Base/Farcaster Wallet First"}
+    </button>
+  </div>
+</details>
 
 {selectedMember && (
   <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.96)', backdropFilter: 'blur(15px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>

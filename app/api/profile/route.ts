@@ -12,6 +12,7 @@ const ProfileSchema = z.object({
   fid: z.number(),
   username: z.string().min(1).trim(),
   pfp: z.string().optional().nullable(),
+  // NICK alanı eklendi
   nick: z.string().optional().nullable().transform(val => val?.trim() || null),
   city: z
     .string()

@@ -30,8 +30,8 @@ const MenuGrid = ({ onItemClick }: { onItemClick: (type: string) => void }) => {
   const menuItems = [
     { id: 'needs', label: 'Needs', color: '#2563eb' },
     { id: 'offers', label: 'Offers', color: '#2563eb' },
-    { id: 'members', label: 'Members', color: '#2563eb' },
-    { id: 'groups', label: 'Communities', color: '#2563eb' },
+    { id: 'active members', label: 'Active Members', color: '#2563eb' },
+    { id: 'communities', label: 'Communities', color: '#2563eb' },
   ];
 
   return (
@@ -268,7 +268,7 @@ const fetchLeaderboardData = useCallback(async () => {
 }, []);
 
 useEffect(() => {
-  if (activeModal === 'members') {
+  if (activeModal === 'active members') {
     fetchLeaderboardData();
   }
 }, [activeModal, fetchLeaderboardData]);
@@ -629,7 +629,7 @@ const handleDeleteNeed = async (id: string) => {
 
                 <div>
 
-                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(user.username)}</p>
+                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(user)}</p>
 
                   <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>📍 {user.city || "Global"} • {user.bio || "No offer description"}</p>
 
@@ -700,9 +700,9 @@ const handleDeleteNeed = async (id: string) => {
   <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9ca3af' }}>⚙️ Profile Settings</summary>
   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
     
-    {/* NICKNAME INPUT - Yeni eklenen alan */}
+    
     <input 
-      placeholder="Nickname (e.g. Master Builder)" 
+      placeholder="Add your nickname (optional)" 
       value={nickname} 
       onChange={(e) => setNickname(e.target.value)} 
       style={{ padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} 
@@ -845,13 +845,13 @@ const handleDeleteNeed = async (id: string) => {
           ) : <p style={{ color: '#666', textAlign: 'center', fontSize: '0.9rem' }}>No offers found.</p>
         )}
 
-        {activeModal === 'groups' && (
+        {activeModal === 'communities' && (
           <a href="https://warpcast.com/~/channel/houra" target="_blank" rel="noopener noreferrer" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', display: 'block', textAlign: 'center', fontWeight: 'bold' }}>
             🟣 Houra Farcaster Channel
           </a>
         )}
 
-       {activeModal === 'members' && (
+       {activeModal === 'active members' && (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
     {leaderboard.length > 0 ? (
       leaderboard.map((member, index) => (

@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    // 1. Leaderboard
+    // 1. Leaderboard verilerini çek
     const { data: lbData, error: lbError } = await supabase
       .from('leaderboard')
       .select('tx_count, rank, wallet_address')
@@ -16,18 +16,14 @@ export async function GET() {
 
     if (lbError) throw lbError;
 
-    // 2. Profiles
+    // 2. Profilleri çek (NICK alanını buraya ekledik)
     const { data: profData, error: profError } = await supabase
       .from('profiles')
-      .select('username, wallet_address'); 
+      .select('username, nick, wallet_address, fid'); 
 
     if (profError) throw profError;
 
-    // DEBUG LOGS
-    console.log("LB Count:", lbData?.length);
-    console.log("Prof Count:", profData?.length);
-
-    // 3. Matching
+    // 3. Eşleştirme ve Veri Formatlama
     const results = (lbData || []).map(entry => {
       const p = (profData || []).find(
         u => String(u.wallet_address).toLowerCase() === String(entry.wallet_address).toLowerCase()
@@ -37,13 +33,19 @@ export async function GET() {
         tx_count: entry.tx_count,
         rank: entry.rank,
         wallet_address: entry.wallet_address,
-        profiles: p ? { username: p.username } : null
+        fid: p?.fid, // Profil kartını açabilmek için FID önemli
+        profiles: p ? { 
+          username: p.username, 
+          nick: p.nick,
+          // Frontend'deki formatUsername için display_name ekliyoruz
+          display_name: p.nick || p.username 
+        } : null
       };
     });
 
     return NextResponse.json(results);
   } catch (error: any) {
-    console.error("ERROR:", error.message);
+    console.error("Members Route Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

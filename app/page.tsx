@@ -296,6 +296,12 @@ useEffect(() => {
 
       }],
 
+      capabilities: {
+      paymasterService: {
+        url: `https://api.developer.coinbase.com/rpc/v1/base/pzrnQ3H4MpjsKXUCTazE2lDeDrk7tj9E`,
+      },
+    },
+
     }, {
 
       onSuccess: () => {

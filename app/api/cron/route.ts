@@ -41,14 +41,19 @@ export async function GET(request: Request) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const activityMap: Record<string, number> = {};
-    transfers.forEach((tx: any) => {
-      const txDate = new Date(tx.metadata.blockTimestamp);
-      if (txDate > thirtyDaysAgo) {
-        const from = tx.from.toLowerCase();
-        activityMap[from] = (activityMap[from] || 0) + 1;
-      }
-    });
+   const activityMap: Record<string, number> = {};
+
+transfers.forEach((tx: any) => {
+  const txDate = new Date(tx.metadata.blockTimestamp);
+  if (txDate > thirtyDaysAgo) {
+    const from = tx.from.toLowerCase();
+    const to = tx.to.toLowerCase();
+
+    activityMap[from] = (activityMap[from] || 0) + 1;
+
+    activityMap[to] = (activityMap[to] || 0) + 1;
+  }
+});
 
     const topPerformers = Object.entries(activityMap)
       .map(([address, count]) => ({ wallet_address: address, tx_count: count }))

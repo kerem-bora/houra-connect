@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { useEffect, useState, useCallback } from "react";
 
-import { sdk } from "@farcaster/frame-sdk"; 
+import { sdk } from "@farcaster/miniapp-sdk";
 
 import { useReadContract, useAccount } from 'wagmi';
 
@@ -183,28 +183,30 @@ const formatUsername = (user: any) => {
 useEffect(() => {
   const init = async () => {
     try {
-      const ctx = await sdk.context;
-     
-      if (ctx?.user?.fid) {
+        const ctx = await sdk.context;
+      
+        if (ctx?.user?.fid) {
         setContext(ctx);
         setIsFarcaster(true);
-
-        fetchAllData(ctx.user.fid);
+        fetchAllData(ctx.user.fid); // Kullanıcıya özel verileri yükle
       } else {
-        fetchAllData();
+             setIsFarcaster(false);
+        fetchAllData(); // Sadece genel tanıtım verilerini çek
       }
 
+      // Splash screen'i kaldır
       sdk.actions.ready();
     } catch (e) {
       console.error("SDK Init Error:", e);
+      setIsFarcaster(false);
       fetchAllData();
     } finally {
       setIsSDKLoaded(true);
     }
   };
+
   init();
 }, [fetchAllData]);
-
 
 
   // --- SEARCH LOGIC ---

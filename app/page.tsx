@@ -332,18 +332,20 @@ const handleAddNeed = async () => {
     
     try {
       setStatus("Posting...");
+     const userFid = Number(context.user.fid);
+
       const res = await fetch("/api/needs", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "x-farcaster-fid": context.user.fid.toString() 
+          "x-farcaster-fid": userFid.toString() 
         },
         body: JSON.stringify({
-          fid: context.user.fid,
+          fid: userFid,
           username: context.user.username,
           location: needLocation || "Global",
           text: needText,
-          wallet_address: currentAddress.toLowerCase(), // Küçük harfe zorla
+          wallet_address: currentAddress.toLowerCase(),
           price: needPrice.toString(),
         }),
       });

@@ -56,9 +56,9 @@ export default function Home() {
 
   const { connect, connectors } = useConnect();
 
-    
+  const [isMounted, setIsMounted] = useState(false);
+  
   const { address: currentAddress, isConnected } = useAccount();
-
     
   const [location, setLocation] = useState("");
 
@@ -161,28 +161,27 @@ const formatUsername = (user: any) => {
   return nameToDisplay;
 };
 
+
+
 // --- INIT ---
 
 useEffect(() => {
-  const init = async () => {
-    try {
-      await fetchAllData(); 
-      
-      if (!isLoading) {
-         if (typeof window !== 'undefined') {
-          window.parent.postMessage({ type: 'ready' }, '*');
-        }
-      }
-    } catch (e: any) {
-      console.error("Init Error:", e);
-    } finally {
-      setIsLoading(false); 
+    setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      window.parent.postMessage({ type: 'ready' }, '*');
     }
-  };
+  }, []);
 
-  init();
-}, [fetchAllData, isLoading]);
+  useEffect(() => {
+    if (isMounted && !isConnected && connectors.length > 0) {
+      const baseConnector = connectors.find((c) => c.id === 'baseAccount');
+      if (baseConnector) {
+        connect({ connector: baseConnector });
+      }
+    }
+  }, [isMounted, isConnected, connectors, connect]);
 
+  if (!isMounted) return null;
 
 
 // --- LIVE SEARCH LOGIC ---
@@ -264,7 +263,7 @@ useEffect(() => {
 
       capabilities: {
       paymasterService: {
-        url: `https://api.developer.coinbase.com/rpc/v1/base/pzrnQ3H4MpjsKXUCTazE2lDeDrk7tj9E`,
+        url: process.env.NEXT_PUBLIC_PAYMASTER_URL,
       },
     },
 
@@ -451,45 +450,51 @@ if (isLoading) {
 }
 
 
-if (!isConnected) {
-  return (
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
-      
-     
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <p style={{ color: '#2563eb', fontWeight: 'bold', margin: 0 }}>Connecting to Base...</p>
-        <p style={{ fontSize: '0.8rem', color: '#666' }}>Please wait while we secure your session.</p>
+if (!isMounted) return null;
+
+  const AboutContent = () => (
+    <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', textAlign: 'left' }}>
+      <h2 style={{ marginTop: 0, color: '#fff' }}>Welcome to Houra</h2>
+      <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
+        Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based tokens.
+      </p>
+      <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px', color: '#eee' }}>
+        <p>📍 <strong>Profile:</strong> Set your location and what you offer.</p>
+        <p>⏳ <strong>Earn:</strong> Help others and collect Houra tokens.</p>
+        <p>🛠️ <strong>Post:</strong> Share your needs and reward others.</p>
       </div>
 
-      <AboutContent />
+      <hr style={{ borderColor: '#222', margin: '20px 0' }} />
+      
+      <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px', color: '#ccc' }}>
+        <p><strong>To Join:</strong></p>
+        <p>1. Open <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Base app</a>.</p>
+        <p>2. Search for <strong>"Houra"</strong>.</p>
+      </div>
 
-      <button 
-        onClick={() => {
-  
-  const baseConnector = connectors.find(
-    (c) => c.id === 'baseAccount' || c.id === 'coinbaseWalletSDK' || c.type === 'coinbaseWallet'
+      <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
+        Read more: <Link href="https://en.wikipedia.org/wiki/Time-based_currency" style={{ color: '#3b82f6' }}>Time-based currencies</Link>.
+      </p>
+    </div>
   );
 
-  if (baseConnector) {
-    connect({ connector: baseConnector });
-  } else {
-   
-    if (connectors.length > 0) connect({ connector: connectors[0] });
-  }
-}}
-        style={{ 
-          marginTop: '20px', 
-          padding: '15px 30px', 
-          background: '#fff', 
-          color: '#000', 
-          borderRadius: '12px', 
-          fontWeight: 'bold',
-          border: 'none',
-          cursor: 'pointer'
-        }}
-      >
-        Enter Houra
+  if (!isConnected) {
+    return (
+      <main style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <p style={{ color: '#3b82f6', fontWeight: 'bold', margin: 0 }}>Connecting to Base...</p>
+          <p style={{ fontSize: '0.8rem', color: '#666' }}>Please wait while we secure your session.</p>
+        </div>
+        <AboutContent />
+        <button 
+          onClick={() => {
+            const c = connectors.find((c) => c.id === 'baseAccount' || c.type === 'coinbaseWallet') || connectors[0];
+            if (c) connect({ connector: c });
+          }}
+          style={{ marginTop: '20px', padding: '15px 30px', background: '#fff', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', width: '100%', maxWidth: '400px' }}
+        >
+          Enter Houra
       </button>
 
       <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>

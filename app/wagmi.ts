@@ -4,6 +4,7 @@ import { baseAccount, injected } from 'wagmi/connectors';
 
 export const config = createConfig({
   chains: [base],
+  multiInjectedProviderDiscovery: false,
   connectors: [
     injected(),
     baseAccount({

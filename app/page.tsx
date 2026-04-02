@@ -466,9 +466,18 @@ if (!isConnected) {
 
       <button 
         onClick={() => {
-          const baseConnector = connectors.find((c) => c.id === 'baseAccount');
-          if (baseConnector) connect({ connector: baseConnector });
-        }} 
+  
+  const baseConnector = connectors.find(
+    (c) => c.id === 'baseAccount' || c.id === 'coinbaseWalletSDK' || c.type === 'coinbaseWallet'
+  );
+
+  if (baseConnector) {
+    connect({ connector: baseConnector });
+  } else {
+   
+    if (connectors.length > 0) connect({ connector: connectors[0] });
+  }
+}}
         style={{ 
           marginTop: '20px', 
           padding: '15px 30px', 

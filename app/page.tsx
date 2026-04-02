@@ -233,21 +233,30 @@ useEffect(() => {
 
 
 useEffect(() => {
-  if (offerQuery.length === 0) {
-    setSearchOfferResults([]);
-    return;
-  }
-
-  const timer = setTimeout(async () => {
-    if (offerQuery.length > 1) {
-      const res = await fetch(`/api/search?q=${offerQuery}`);
-      const data = await res.json();
-      setSearchOfferResults(data.users || []);
+  const init = async () => {
+    try {
+      await sdk.actions.ready();
+      const ctx = await sdk.context;
+      
+      if (ctx?.user?.fid) {
+        setContext(ctx);
+        setIsFarcaster(true);
+        await fetchAllData(ctx.user.fid);
+      } else {
+        setIsFarcaster(false);
+        await fetchAllData();
+      }
+    } catch (e) {
+      console.error("SDK Init Error:", e);
+      setIsFarcaster(false);
+      await fetchAllData();
+    } finally {
+      setIsSDKLoaded(true);
     }
-  }, 400);
-  
-  return () => clearTimeout(timer);
-}, [offerQuery]); //
+  };
+
+  init();
+}, [fetchAllData]);
 
 
 // --- Active members ---

@@ -57,6 +57,10 @@ export default function Home() {
 
   // --- STATES ---
 
+const [debugLog, setDebugLog] = useState<string[]>([]);
+const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
+
+
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
 
   const [isFarcaster, setIsFarcaster] = useState(false);
@@ -183,24 +187,37 @@ const formatUsername = (user: any) => {
 useEffect(() => {
   const init = async () => {
     try {
-        const ctx = await sdk.context;
+      addLog("SDK başlatılıyor...");
       
-        if (ctx?.user?.fid) {
+      // 1. Splash screen'i hemen kaldır (Base App için en kritik adım)
+      addLog("sdk.actions.ready() çağrılıyor...");
+      await sdk.actions.ready();
+      addLog("Ready başarılı.");
+
+      // 2. Context'i al
+      addLog("Context bekleniyor...");
+      const ctx = await sdk.context;
+      addLog(`Context geldi: ${ctx?.user?.fid ? "FID bulundu" : "FID yok"}`);
+      
+      if (ctx?.user?.fid) {
         setContext(ctx);
         setIsFarcaster(true);
-        fetchAllData(ctx.user.fid); // Kullanıcıya özel verileri yükle
+        addLog("Veriler çekiliyor...");
+        await fetchAllData(ctx.user.fid);
+        addLog("Veri çekme tamam.");
       } else {
-             setIsFarcaster(false);
-        fetchAllData(); // Sadece genel tanıtım verilerini çek
+        setIsFarcaster(false);
+        addLog("Farcaster dışı ortam, genel veriler çekiliyor.");
+        await fetchAllData();
       }
-
-      // Splash screen'i kaldır
-      sdk.actions.ready();
-    } catch (e) {
+    } catch (e: any) {
+      addLog(`HATA OLUŞTU: ${e.message}`);
       console.error("SDK Init Error:", e);
       setIsFarcaster(false);
-      fetchAllData();
+      // Hata olsa bile ana verileri çekmeyi dene
+      await fetchAllData();
     } finally {
+      addLog("Yükleme tamamlandı (isSDKLoaded = true)");
       setIsSDKLoaded(true);
     }
   };
@@ -231,32 +248,6 @@ useEffect(() => {
 
   }, [searchQuery]);
 
-
-useEffect(() => {
-  const init = async () => {
-    try {
-      await sdk.actions.ready();
-      const ctx = await sdk.context;
-      
-      if (ctx?.user?.fid) {
-        setContext(ctx);
-        setIsFarcaster(true);
-        await fetchAllData(ctx.user.fid);
-      } else {
-        setIsFarcaster(false);
-        await fetchAllData();
-      }
-    } catch (e) {
-      console.error("SDK Init Error:", e);
-      setIsFarcaster(false);
-      await fetchAllData();
-    } finally {
-      setIsSDKLoaded(true);
-    }
-  };
-
-  init();
-}, [fetchAllData]);
 
 
 // --- Active members ---
@@ -496,11 +487,19 @@ const handleDeleteNeed = async (id: string) => {
   );
 
 
+// --- RENDER ---
 
-  // --- RENDER ---
-
-  if (!isSDKLoaded) return <div style={{ background: '#000', color: '#fff', textAlign: 'center', padding: '50px' }}>Loading...</div>;
-
+if (!isSDKLoaded) {
+  return (
+    <div style={{ background: '#000', color: '#fff', padding: '20px', fontSize: '12px', fontFamily: 'monospace' }}>
+      <h2 style={{ color: '#2563eb' }}>Houra Debug Mode</h2>
+      <div style={{ border: '1px solid #333', padding: '10px', background: '#111' }}>
+        {debugLog.map((log, i) => <div key={i} style={{ marginBottom: '5px' }}>{log}</div>)}
+      </div>
+      <p style={{ marginTop: '20px', color: '#666' }}>Yükleniyor...</p>
+    </div>
+  );
+}
 
 
   if (!isFarcaster) {

@@ -4,14 +4,19 @@ import { baseAccount, injected } from 'wagmi/connectors';
 
 export const config = createConfig({
   chains: [base],
-  multiInjectedProviderDiscovery: false,
+
+  multiInjectedProviderDiscovery: false, 
   connectors: [
-    injected(),
+    // Base Account konnektörü en üstte olmalı
     baseAccount({
-      appName: 'Houra', 
+      appName: 'Houra',
+      preference: 'smartWalletOnly',
     }),
+    injected(),
   ],
-  storage: createStorage({ storage: cookieStorage }),
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
   ssr: true,
   transports: {
     [base.id]: http(),

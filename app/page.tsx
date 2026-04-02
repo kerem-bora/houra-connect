@@ -10,7 +10,6 @@ import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 import { http, createConfig, createStorage, cookieStorage } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { baseAccount, injected } from 'wagmi/connectors';
-import { base } from "@base-org/account";
 
 export const config = createConfig({
   chains: [base],
@@ -195,9 +194,12 @@ useEffect(() => {
     try {
       await fetchAllData(); 
       
-      // Veriler yüklendiğinde ve uygulama render edilmeye hazır olduğunda
       if (!isLoading) {
-        base.send({ type: 'ready' }); 
+       
+        if (typeof window !== 'undefined' && window.parent) {
+          window.parent.postMessage({ type: 'ready' }, '*');
+          console.log("Houra: Ready signal sent via postMessage");
+        }
       }
     } catch (e: any) {
       console.error("Init Error:", e);

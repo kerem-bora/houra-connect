@@ -57,6 +57,8 @@ export default function Home() {
 
   // --- STATES ---
 
+const [debugLog, setDebugLog] = useState<string[]>([]);
+const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
 
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
 

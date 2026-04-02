@@ -57,9 +57,6 @@ export default function Home() {
 
   // --- STATES ---
 
-const [debugLog, setDebugLog] = useState<string[]>([]);
-const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
-
 
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
 
@@ -187,41 +184,15 @@ const formatUsername = (user: any) => {
 useEffect(() => {
   const init = async () => {
     try {
-      addLog("SDK başlatılıyor...");
+      addLog("Base Standard Web App mod...");
       
-      // 1. Ready çağrısını await ETMEDEN tetikleyin. 
-      // await koyduğumuzda, SDK yanıt vermezse kod burada asılı kalır.
-      addLog("sdk.actions.ready() tetikleniyor...");
-      sdk.actions.ready(); 
-      addLog("Ready tetiklendi, bir sonraki adıma geçiliyor.");
-
-      // 2. Context alımına bir zaman sınırı (timeout) koyalım
-      addLog("Context bekleniyor...");
-      const ctx = await Promise.race([
-        sdk.context,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Zaman Aşımı")), 3000))
-      ]).catch(() => null); // Hata alsa bile null dönsün ve devam etsin
-
-      addLog(`Context durumu: ${ctx?.user?.fid ? "FID bulundu" : "FID yok"}`);
-      
-      if (ctx?.user?.fid) {
-        setContext(ctx);
-        setIsFarcaster(true);
-        addLog("Veriler çekiliyor...");
-        await fetchAllData(ctx.user.fid);
-        addLog("Veri çekme tamam.");
-      } else {
-        setIsFarcaster(false);
-        addLog("Dış ortam veya FID yok, genel veriler çekiliyor.");
-        await fetchAllData();
-      }
+      await fetchAllData(); 
+ 
     } catch (e: any) {
-      addLog(`KRİTİK HATA: ${e.message}`);
-      setIsFarcaster(false);
-      await fetchAllData();
+      addLog(`Error: ${e.message}`);
     } finally {
-      addLog("Yükleme işlemi sonlandırıldı.");
       setIsSDKLoaded(true);
+      setIsFarcaster(false); 
     }
   };
 

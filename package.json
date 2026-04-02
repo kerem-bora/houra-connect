@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@base-org/account": "^2.5.3",
     "@coinbase/onchainkit": "^1.1.2",
     "@farcaster/miniapp-sdk": "0.2.3",
     "@supabase/supabase-js": "^2.42.0",

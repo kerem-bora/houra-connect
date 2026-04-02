@@ -4,14 +4,34 @@
 import Link from "next/link";
 
 import { useEffect, useState, useCallback } from "react";
-
-import { sdk } from "@farcaster/miniapp-sdk";
-
-import { useReadContract, useAccount } from 'wagmi';
-
+import { useReadContract, useAccount, useConnect } from 'wagmi';
 import { useSendCalls } from 'wagmi/experimental'; 
-
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
+import { http, createConfig, createStorage, cookieStorage } from 'wagmi';
+import { base } from 'wagmi/chains';
+import { baseAccount, injected } from 'wagmi/connectors';
+import { baseApp } from "@base-org/account";
+
+export const config = createConfig({
+  chains: [base],
+  connectors: [
+    injected(),
+    baseAccount({
+      appName: 'Houra',
+    }),
+  ],
+  storage: createStorage({ storage: cookieStorage }),
+  ssr: true,
+  transports: {
+    [base.id]: http(),
+  },
+});
+
+declare module 'wagmi' {
+  interface Register {
+    config: typeof config;
+  }
+}
 
 
 // --- CONFIG ---
@@ -57,15 +77,16 @@ export default function Home() {
 
   // --- STATES ---
 
-const [debugLog, setDebugLog] = useState<string[]>([]);
-const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
+  const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
 
-  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); 
 
-  const [isFarcaster, setIsFarcaster] = useState(false);
+  const { connect, connectors } = useConnect();
 
-  const [context, setContext] = useState<any>(null);
+    
+  const { address: currentAddress, isConnected } = useAccount();
 
+    
   const [location, setLocation] = useState("");
 
   const [offer, setOffer] = useState("");
@@ -102,8 +123,6 @@ const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLo
 
   const [nickname, setNickname] = useState(""); 
 
-  const { address: currentAddress } = useAccount();
-
   const { sendCalls } = useSendCalls();
 
 
@@ -123,7 +142,6 @@ const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLo
   });
 
 
-
   const formattedBalance = rawBalance !== undefined 
 
     ? Number(formatUnits(rawBalance as bigint, 18)).toLocaleString() 
@@ -132,34 +150,22 @@ const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLo
 
 
 
-const fetchAllData = useCallback(async (fid?: number) => {
+const fetchAllData = useCallback(async () => {
   try {
-   
     const promises: Promise<any>[] = [
       fetch('/api/needs').then(res => res.json()),
       fetch('/api/profile').then(res => res.json())
     ];
 
-   
-    if (fid) {
-      promises.push(fetch(`/api/profile?fid=${fid}`).then(res => res.json()));
+    // Eğer cüzdan bağlıysa kullanıcının kendi profilini çek
+    if (currentAddress) {
+      promises.push(fetch(`/api/profile?address=${currentAddress.toLowerCase()}`).then(res => res.json()));
     }
 
-
-    const results = await Promise.all(promises);
+    const [needsData, membersData, userData] = await Promise.all(promises);
     
-    const needsData = results[0];
-    const membersData = results[1];
-    const userData = results[2]; 
-
-
     if (needsData) setNeeds(needsData.needs || []);
-    if (membersData) {
-      console.log("Profile data:", membersData);
-      setOfferResults(membersData.profiles || []);
-    }
-    
-
+    if (membersData) setOfferResults(membersData.profiles || []);
     if (userData?.profile) {
       setLocation(userData.profile.city || "");
       setOffer(userData.profile.talents || "");
@@ -168,7 +174,8 @@ const fetchAllData = useCallback(async (fid?: number) => {
   } catch (e) { 
     console.error("Fetch Error:", e); 
   }
-}, []);
+}, [currentAddress]);
+
 
 
 // --- Format username ---
@@ -181,48 +188,52 @@ const formatUsername = (user: any) => {
   return nameToDisplay;
 };
 
-  // --- SDK INIT ---
+// --- INIT ---
 
 useEffect(() => {
   const init = async () => {
     try {
-      addLog("Base Standard Web App mod...");
-      
       await fetchAllData(); 
- 
+      
+      // Veriler yüklendiğinde ve uygulama render edilmeye hazır olduğunda
+      if (!isLoading) {
+        // Built-in yöntem: Base App'e "hazırım, loading ekranını kaldır" der.
+        baseApp.send({ type: 'ready' }); 
+      }
     } catch (e: any) {
-      addLog(`Error: ${e.message}`);
+      console.error("Init Error:", e);
     } finally {
-      setIsSDKLoaded(true);
-      setIsFarcaster(false); 
+      setIsLoading(false); 
     }
   };
 
   init();
-}, [fetchAllData]);
+}, [fetchAllData, isLoading]);
 
 
-  // --- SEARCH LOGIC ---
 
-  useEffect(() => {
+// --- LIVE SEARCH LOGIC ---
 
-    const timer = setTimeout(async () => {
+useEffect(() => {
+  
+  if (!offerQuery.trim()) {
+    setSearchOfferResults([]);
+    return;
+  }
 
-      if (searchQuery.length > 1) {
+    const filtered = offerResults.filter((user: any) => {
+    const searchTerm = offerQuery.toLowerCase();
+    
+    return (
+      (user.nick?.toLowerCase().includes(searchTerm)) ||
+      (user.city?.toLowerCase().includes(searchTerm)) ||
+      (user.talents?.toLowerCase().includes(searchTerm)) ||
+      (user.bio?.toLowerCase().includes(searchTerm))
+    );
+  });
 
-        const res = await fetch(`/api/search?q=${searchQuery}`);
-
-        const data = await res.json();
-
-        setSearchResults(data.users || []);
-
-      }
-
-    }, 200);
-
-    return () => clearTimeout(timer);
-
-  }, [searchQuery]);
+  setSearchOfferResults(filtered);
+}, [offerQuery, offerResults]);
 
 
 
@@ -302,23 +313,18 @@ useEffect(() => {
 
 
 const handleAddNeed = async () => {
-    if (!needText) return setStatus("Write your need.");
-    if (!context?.user?.fid) return setStatus("Base or Farcaster login required.");
-    if (!currentAddress) return setStatus("Connect wallet first.");
+    if (!needText) return setStatus("Please describe your need.");
+    if (!currentAddress) return setStatus("Wallet connection missing.");
     
     try {
       setStatus("Posting...");
-     const userFid = Number(context.user.fid);
-
       const res = await fetch("/api/needs", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "x-farcaster-fid": userFid.toString() 
-        },
+          "Content-Type": "application/json"},
         body: JSON.stringify({
-          fid: userFid,
-          username: context.user.username,
+          address: currentAddress.toLowerCase(),
+          username: nickname || "Anonymous", 
           location: needLocation || "Global",
           text: needText,
           wallet_address: currentAddress.toLowerCase(),
@@ -327,7 +333,7 @@ const handleAddNeed = async () => {
       });
 
       if (res.ok) {
-        setStatus("Need posted! ✅");
+        setStatus("Need posted successfully! ✅");
         setNeedText(""); setNeedLocation("");
         const nRes = await fetch('/api/needs');
         const nData = await nRes.json();
@@ -343,22 +349,19 @@ const handleAddNeed = async () => {
  
 
 const handleSaveProfile = async () => {
-    if (!context?.user?.fid || !currentAddress) {
-      setStatus("Error: Connection missing");
+    if (!currentAddress) {
+      setStatus("Error: Authentication required");
       return;
     }
     
     try {
-      setStatus("Saving...");
+      setStatus("Saving changes...");
       const res = await fetch("/api/profile", { 
         method: "POST", 
         headers: { 
-          "Content-Type": "application/json",
-          "x-farcaster-fid": context.user.fid.toString()
-        }, 
+          "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          fid: Number(context.user.fid), 
-          username: context.user.username,
+          address: currentAddress.toLowerCase(),
           nick: nickname,
           city: location, 
           talents: offer, 
@@ -380,38 +383,37 @@ const handleSaveProfile = async () => {
 
   
 const handleDeleteNeed = async (id: string) => {
-    if (!id || !context?.user?.fid || !currentAddress) return;
+   if (!id || !currentAddress) return;
+  
+  try {
+    setStatus("Deleting...");
     
-    try {
-      setStatus("Deleting...");
-      const res = await fetch(`/api/needs?id=${id}&fid=${context.user.fid}`, { 
-        method: "DELETE",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-farcaster-fid": context.user.fid.toString() 
-        },
-        body: JSON.stringify({
-          address: currentAddress.toLowerCase() 
-        })
-      });
+      const res = await fetch(`/api/needs?id=${id}`, { 
+      method: "DELETE",
+      headers: { 
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+       address: currentAddress.toLowerCase() 
+      })
+    });
 
-      const data = await res.json(); 
+    const data = await res.json(); 
 
-        if (res.ok && data.success) {
-        setNeeds(prev => prev.filter(n => n.id !== id));
-        setStatus("Deleted! ✅");
-    
-        await fetchAllData(context.user.fid); 
-      } else {
-    
-        setStatus(`Error: ${data.error || "Delete failed"}`);
-      }
-    } catch (e) { 
-      setStatus("Error deleting"); 
-    } finally {
-      setTimeout(() => setStatus(""), 3000);
+    if (res.ok && data.success) {
+      setNeeds(prev => prev.filter(n => n.id !== id));
+      setStatus("Deleted! ✅");
+  
+       await fetchAllData(); 
+    } else {
+      setStatus(`Error: ${data.error || "Delete failed"}`);
     }
-  };
+  } catch (e) { 
+    setStatus("Error deleting"); 
+  } finally {
+    setTimeout(() => setStatus(""), 3000);
+  }
+};
 
   // --- COMPONENTS ---
 
@@ -427,7 +429,7 @@ const handleDeleteNeed = async (id: string) => {
       <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
     </div>
 
-    {!isFarcaster && (
+    {!isConnected && (
       <>
         <hr style={{ borderColor: '#222' }} />
         <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -446,12 +448,12 @@ const handleDeleteNeed = async (id: string) => {
 </Link>.
     </p>
 
-    {isFarcaster && (
+    {isConnected && (
       <>
         <hr style={{ borderColor: '#222' }} />
         <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <p><strong>To Join Houra:</strong></p>
-          <p>1. Create your Base/Farcaster wallet.</p>
+          <p>1. Create your Base App wallet.</p>
           <p>2. Register by <strong>saving your location and what you offer</strong>.</p>
         </div>
         <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>
@@ -465,68 +467,79 @@ const handleDeleteNeed = async (id: string) => {
 
 // --- RENDER ---
 
-if (!isSDKLoaded) {
+
+if (isLoading) {
   return (
-    <div style={{ background: '#000', color: '#fff', padding: '20px', fontSize: '12px', fontFamily: 'monospace' }}>
-      <h2 style={{ color: '#2563eb' }}>Houra Debug Mode</h2>
-      <div style={{ border: '1px solid #333', padding: '10px', background: '#111' }}>
-        {debugLog.map((log, i) => <div key={i} style={{ marginBottom: '5px' }}>{log}</div>)}
-      </div>
-      <p style={{ marginTop: '20px', color: '#666' }}>Loading...</p>
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <img src="/houra-logo.png" alt="Houra" style={{ width: '60px', height: '60px', marginBottom: '20px', opacity: 0.5 }} />
+      <p style={{ fontSize: '0.9rem', letterSpacing: '1px' }}>Loading Houra...</p>
     </div>
   );
 }
 
 
-  if (!isFarcaster) {
-
-    return (
-
-      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-
-        <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
-
-        <AboutContent />
-
-        <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
-
-      </div>
-
-    );
-
-  }
-
-
-
+if (!isConnected) {
   return (
-
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
-          <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-
-          <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
-
-        </div>
-
-        <button onClick={() => setIsAboutOpen(true)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontStyle: 'italic', fontFamily: 'serif', fontSize: '1.1rem' }}>i</button>
-
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
+      
+     
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <p style={{ color: '#2563eb', fontWeight: 'bold', margin: 0 }}>Connecting to Base...</p>
+        <p style={{ fontSize: '0.8rem', color: '#666' }}>Please wait while we secure your session.</p>
       </div>
 
-      {isAboutOpen && (
+      <AboutContent />
 
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <button 
+        onClick={() => {
+          const baseConnector = connectors.find((c) => c.id === 'baseAccount');
+          if (baseConnector) connect({ connector: baseConnector });
+        }} 
+        style={{ 
+          marginTop: '20px', 
+          padding: '15px 30px', 
+          background: '#fff', 
+          color: '#000', 
+          borderRadius: '12px', 
+          fontWeight: 'bold',
+          border: 'none',
+          cursor: 'pointer'
+        }}
+      >
+        Enter Houra
+      </button>
 
-          <AboutContent />
+      <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
+    </div>
+  );
+}
 
-        </div>
 
-      )}
+return (
+  <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
+    {/* Üst Header Kısmı */}
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <img src="/houra-logo.png" alt="Houra" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+        <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Houra</h1>
+      </div>
+      <button 
+        onClick={() => setIsAboutOpen(true)} 
+        style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontStyle: 'italic', fontFamily: 'serif', fontSize: '1.1rem' }}
+      >
+        i
+      </button>
+    </div>
 
-      
+ 
+    {isAboutOpen && (
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <AboutContent />
+      </div>
+    )}
+
+        
 
       {/* 1. SEND PANEL */}
 
@@ -548,7 +561,7 @@ if (!isSDKLoaded) {
 
                 {searchResults.map(user => (
 
-                  <div key={user.fid} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
+                  <div key={user.wallet_address || user.address} onClick={() => { setSelectedRecipient(user); setSearchResults([]); setSearchQuery(""); }} style={{ padding: '12px', borderBottom: '1px solid #222', cursor: 'pointer' }}>
 
                     <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold' }}>{formatUsername(user)}</p>
 
@@ -586,19 +599,20 @@ if (!isSDKLoaded) {
 
       </div>
 
-<MenuGrid onItemClick={async (type) => { // Buraya 'async' eklendi
+<MenuGrid onItemClick={async (type) => {
   setActiveModal(type);
+  
+
   if (type === 'offers' || type === 'needs') {
     try {
-
-      const userFid = context?.user?.fid ? Number(context.user.fid) : undefined;
-      await fetchAllData(userFid);
+      
+      await fetchAllData(); 
     } catch (error) {
+      
       console.error("Modal data refresh error:", error);
     }
   }
 }} />
-
       {/* 2. SEARCH FOR OFFERS */}
 
       <div style={{ marginBottom: '20px' }}>
@@ -613,7 +627,7 @@ if (!isSDKLoaded) {
 
             {searchOfferResults.map(user => (
 
-              <div key={user.fid} style={{ padding: '12px', background: '#111', borderRadius: '12px', border: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div key={user.wallet_address || user.address} style={{ padding: '12px', background: '#111', borderRadius: '12px', border: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
                 <div>
 
@@ -722,7 +736,7 @@ if (!isSDKLoaded) {
         border: 'none' 
       }}
     >
-      {currentAddress ? "SAVE PROFILE" : "Please Connect Base/Farcaster Wallet First"}
+      {currentAddress ? "SAVE PROFILE" : "Please Connect Base App Wallet First"}
     </button>
   </div>
 </details>
@@ -768,12 +782,12 @@ if (!isSDKLoaded) {
           SEND 1 HOURA ⏳
         </button>
 
-           <button 
-          onClick={() => sdk.actions.viewProfile({ fid: Number(selectedMember.fid) })}
-          style={{ width: '100%', padding: '10px', borderRadius: '14px', background: 'transparent', color: '#666', fontWeight: '500', border: '1px solid #333', cursor: 'pointer', fontSize: '0.8rem' }}
-        >
-          View Base/Farcaster Profile
-        </button>
+          <button 
+  onClick={() => window.open(`https://base.app/profile/${selectedMember.wallet_address || selectedMember.address}`, "_blank")}
+  style={{ width: '100%', padding: '10px', borderRadius: '14px', background: 'transparent', color: '#666', fontWeight: '500', border: '1px solid #333', cursor: 'pointer', fontSize: '0.8rem' }}
+>
+  View Base Profile
+</button>
       </div>
     </div>
   </div>
@@ -790,12 +804,14 @@ if (!isSDKLoaded) {
         {activeModal === 'needs' && (
           needs.length > 0 ? (
             needs.map((need: any, idx: number) => {
-              const ownerProfile = offerResults.find(p => Number(p.fid) === Number(need.fid));
+              const ownerProfile = offerResults.find(p => 
+  p.wallet_address?.toLowerCase() === need.wallet_address?.toLowerCase()
+);
               return (
                 <div key={idx} style={{ padding: '16px', background: '#000', borderRadius: '20px', border: '1px solid #222' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{formatUsername(ownerProfile || need)}</span>
-                    {context?.user?.fid && Number(need.fid) === Number(context.user.fid) ? (
+                    {currentAddress && need.wallet_address === currentAddress.toLowerCase() ? (
                       <button onClick={() => handleDeleteNeed(need.id)} style={{ padding: '6px 12px', borderRadius: '20px', background: 'rgba(220, 38, 38, 0.1)', color: '#ef4444', fontSize: '0.7rem', border: '1px solid rgba(220, 38, 38, 0.2)', letterSpacing: '0.5px' }}>Delete</button>
                     ) : (
                       ownerProfile && (
@@ -834,8 +850,8 @@ if (!isSDKLoaded) {
         )}
 
         {activeModal === 'communities' && (
-          <a href="https://warpcast.com/~/channel/houra" target="_blank" rel="noopener noreferrer" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', display: 'block', textAlign: 'center', fontWeight: 'bold' }}>
-            🟣 Houra Farcaster Channel
+          <a href="https://chat.whatsapp.com/JscmUTY4n83AzalcQrXcEg" target="_blank" rel="noopener noreferrer" style={{ padding: '15px', background: '#000', borderRadius: '12px', border: '1px solid #222', color: '#fff', textDecoration: 'none', display: 'block', textAlign: 'center', fontWeight: 'bold' }}>
+            🟣 Adalar-Houra Whatsapp Group
           </a>
         )}
 

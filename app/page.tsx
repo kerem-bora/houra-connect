@@ -63,6 +63,7 @@ const AboutContent = ({ isConnected, onClose }: { isConnected: boolean, onClose?
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConnecting, setIsConnecting] = useState(false);
   const { address: currentAddress, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { sendCalls } = useSendCalls();
@@ -130,12 +131,15 @@ export default function Home() {
     fetchAllData();
   }, [fetchAllData]);
 
-  useEffect(() => {
-    if (isMounted && !isConnected && connectors.length > 0) {
-      const baseConnector = connectors.find((c) => c.id === 'baseAccount');
-      if (baseConnector) connect({ connector: baseConnector });
+useEffect(() => {
+  if (isMounted && !isConnected && !isConnecting && connectors.length > 0) {
+    const baseConnector = connectors.find((c) => c.id === 'baseAccount');
+    if (baseConnector) {
+      setIsConnecting(true); // Kilidi aktif et
+      connect({ connector: baseConnector });
     }
-  }, [isMounted, isConnected, connectors, connect]);
+  }
+}, [isMounted, isConnected, isConnecting, connectors, connect]);
 
   useEffect(() => {
     if (!searchQuery.trim()) { setSearchResults([]); return; }

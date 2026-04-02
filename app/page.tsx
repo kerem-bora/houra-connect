@@ -10,7 +10,7 @@ import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 import { http, createConfig, createStorage, cookieStorage } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { baseAccount, injected } from 'wagmi/connectors';
-import { baseApp } from "@base-org/account";
+import { base } from "@base-org/account";
 
 export const config = createConfig({
   chains: [base],
@@ -197,8 +197,7 @@ useEffect(() => {
       
       // Veriler yüklendiğinde ve uygulama render edilmeye hazır olduğunda
       if (!isLoading) {
-        // Built-in yöntem: Base App'e "hazırım, loading ekranını kaldır" der.
-        baseApp.send({ type: 'ready' }); 
+        base.send({ type: 'ready' }); 
       }
     } catch (e: any) {
       console.error("Init Error:", e);

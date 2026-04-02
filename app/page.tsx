@@ -189,15 +189,20 @@ useEffect(() => {
     try {
       addLog("SDK başlatılıyor...");
       
-      // 1. Splash screen'i hemen kaldır (Base App için en kritik adım)
-      addLog("sdk.actions.ready() çağrılıyor...");
-      await sdk.actions.ready();
-      addLog("Ready başarılı.");
+      // 1. Ready çağrısını await ETMEDEN tetikleyin. 
+      // await koyduğumuzda, SDK yanıt vermezse kod burada asılı kalır.
+      addLog("sdk.actions.ready() tetikleniyor...");
+      sdk.actions.ready(); 
+      addLog("Ready tetiklendi, bir sonraki adıma geçiliyor.");
 
-      // 2. Context'i al
+      // 2. Context alımına bir zaman sınırı (timeout) koyalım
       addLog("Context bekleniyor...");
-      const ctx = await sdk.context;
-      addLog(`Context geldi: ${ctx?.user?.fid ? "FID bulundu" : "FID yok"}`);
+      const ctx = await Promise.race([
+        sdk.context,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Zaman Aşımı")), 3000))
+      ]).catch(() => null); // Hata alsa bile null dönsün ve devam etsin
+
+      addLog(`Context durumu: ${ctx?.user?.fid ? "FID bulundu" : "FID yok"}`);
       
       if (ctx?.user?.fid) {
         setContext(ctx);
@@ -207,17 +212,15 @@ useEffect(() => {
         addLog("Veri çekme tamam.");
       } else {
         setIsFarcaster(false);
-        addLog("Farcaster dışı ortam, genel veriler çekiliyor.");
+        addLog("Dış ortam veya FID yok, genel veriler çekiliyor.");
         await fetchAllData();
       }
     } catch (e: any) {
-      addLog(`HATA OLUŞTU: ${e.message}`);
-      console.error("SDK Init Error:", e);
+      addLog(`KRİTİK HATA: ${e.message}`);
       setIsFarcaster(false);
-      // Hata olsa bile ana verileri çekmeyi dene
       await fetchAllData();
     } finally {
-      addLog("Yükleme tamamlandı (isSDKLoaded = true)");
+      addLog("Yükleme işlemi sonlandırıldı.");
       setIsSDKLoaded(true);
     }
   };
@@ -496,7 +499,7 @@ if (!isSDKLoaded) {
       <div style={{ border: '1px solid #333', padding: '10px', background: '#111' }}>
         {debugLog.map((log, i) => <div key={i} style={{ marginBottom: '5px' }}>{log}</div>)}
       </div>
-      <p style={{ marginTop: '20px', color: '#666' }}>Yükleniyor...</p>
+      <p style={{ marginTop: '20px', color: '#666' }}>Loading...</p>
     </div>
   );
 }

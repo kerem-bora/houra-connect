@@ -1,15 +1,14 @@
 "use client";
 
-
 import Link from "next/link";
-
 import { useEffect, useState, useCallback } from "react";
-import { useReadContract, useAccount, useConnect } from 'wagmi';
+import { useReadContract, useAccount, useConnect, http, createConfig, createStorage, cookieStorage } from 'wagmi';
 import { useSendCalls } from 'wagmi/experimental'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
-import { http, createConfig, createStorage, cookieStorage } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { baseAccount, injected } from 'wagmi/connectors';
+
+// @base-org/account importunu tamamen sildik.
 
 export const config = createConfig({
   chains: [base],
@@ -31,7 +30,6 @@ declare module 'wagmi' {
     config: typeof config;
   }
 }
-
 
 // --- CONFIG ---
 

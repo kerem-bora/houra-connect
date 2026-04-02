@@ -478,7 +478,7 @@ if (!isMounted) return null;
     </div>
   );
 
-  if (!isConnected) {
+if (!isConnected) {
     return (
       <main style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
@@ -495,12 +495,11 @@ if (!isMounted) return null;
           style={{ marginTop: '20px', padding: '15px 30px', background: '#fff', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', width: '100%', maxWidth: '400px' }}
         >
           Enter Houra
-      </button>
-
-      <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
-    </div>
-  );
-}
+        </button>
+        <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
+      </main>
+    );
+  }
 
 
 return (

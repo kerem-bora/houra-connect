@@ -68,10 +68,6 @@ export default function Home() {
 
   const publicClient = usePublicClient();
   
-   const handleSignIn = () => {
-    connect({ connector: connectors[0] }); 
-  };
-  
   const [location, setLocation] = useState("");
 
   const [offer, setOffer] = useState("");
@@ -111,6 +107,29 @@ export default function Home() {
   const { sendCalls } = useSendCalls();
 
 
+ // --- SIGN-IN ---
+
+  const coinbaseConnector = connectors.find(
+    (c) => c.id === 'coinbaseWalletSDK' || c.id === 'coinbaseWallet'
+  );
+  const injectedConnector = connectors.find(
+    (c) => c.id === 'injected'
+  );
+
+  // Base App'in kendi browser'ındaysa window.ethereum inject edilmiş olur
+  const isBaseAppBrowser = 
+    typeof window !== 'undefined' && 
+    (window.ethereum?.isCoinbaseWallet === true || 
+     (window as any).CoinbaseWalletSDK !== undefined);
+
+  if (isBaseAppBrowser && injectedConnector) {
+    connect({ connector: injectedConnector });
+  } else if (coinbaseConnector) {
+    connect({ connector: coinbaseConnector });
+  } else {
+    connect({ connector: connectors[0] });
+  }
+};
 
   // --- DATA FETCHING ---
 
@@ -478,7 +497,9 @@ if (!isConnected) {
       >
         Connect with Base App
       </button>
-
+<p style={{fontSize: '0.7rem', color: '#888', marginTop: '10px', textAlign: 'center'}}>
+  Connectors: {connectors.map(c => c.id).join(', ')}
+</p>
       <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
     </div>
   );

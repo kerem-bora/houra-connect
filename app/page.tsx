@@ -138,14 +138,25 @@ export default function Home() {
   }, [fetchAllData]);
 
   useEffect(() => {
-    if (isMounted && !isConnected && !isConnecting && connectors.length > 0) {
-      const baseConnector = connectors.find((c) => c.id === 'baseAccount');
-      if (baseConnector) {
-        setIsConnecting(true);
-        connect({ connector: baseConnector });
-      }
+if (isMounted && !isConnected && !isConnecting) {
+    // Base/Coinbase Smart Wallet konektörünü bul
+    const baseConnector = connectors.find((c) => c.id === 'coinbaseWalletSDK' || c.id === 'baseAccount');
+    
+    if (baseConnector) {
+      setIsConnecting(true);
+      connect(
+        { connector: baseConnector },
+        {
+          onSettled: () => setIsConnecting(false),
+          onError: (error) => {
+            console.error("Auto-connect error:", error);
+            setIsConnecting(false);
+          }
+        }
+      );
     }
-  }, [isMounted, isConnected, isConnecting, connectors, connect]);
+  }
+}, [isMounted, isConnected, isConnecting, connectors, connect]);
 
   useEffect(() => {
     if (!searchQuery.trim()) { setSearchResults([]); return; }
@@ -207,22 +218,33 @@ export default function Home() {
   if (!isMounted) return null;
 
   if (!isConnected) {
-    return (
-      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-        <AboutContent isConnected={false} />
-        <button 
-          onClick={() => {
-            const c = connectors.find(c => c.id === 'baseAccount') || connectors[0];
-            if (c) connect({ connector: c });
-          }}
-          style={{ marginTop: '20px', padding: '15px 30px', background: '#fff', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', width: '100%', maxWidth: '400px' }}
-        >
-          Connect Wallet
-        </button>
-      </div>
-    );
-  }
-
+return (
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <AboutContent isConnected={false} />
+      <button 
+        disabled={isConnecting}
+        onClick={() => {
+          const c = connectors.find(c => c.id === 'coinbaseWalletSDK' || c.id === 'baseAccount') || connectors[0];
+          if (c) connect({ connector: c });
+        }}
+        style={{ 
+          marginTop: '20px', 
+          padding: '15px 30px', 
+          background: isConnecting ? '#333' : '#fff', 
+          color: isConnecting ? '#888' : '#000', 
+          borderRadius: '12px', 
+          fontWeight: 'bold', 
+          border: 'none', 
+          cursor: isConnecting ? 'not-allowed' : 'pointer', 
+          width: '100%', 
+          maxWidth: '400px' 
+        }}
+      >
+        {isConnecting ? "Connecting to Base..." : "Connect Wallet"}
+      </button>
+    </div>
+  );
+}
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

@@ -498,6 +498,7 @@ if (!isConnected) {
         Connect with Base App
       </button>
 
+
       <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
     </div>
   );

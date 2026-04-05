@@ -70,7 +70,7 @@ const AboutContent = ({ isConnected, onClose }: { isConnected: boolean, onClose?
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const { address: currentAddress, isConnected } = useAccount();
+  const { address: currentAddress, isConnected, status: wagmiStatus } = useAccount();
   const { connect, connectors } = useConnect();
   const { sendCalls } = useSendCalls();
 
@@ -138,25 +138,15 @@ export default function Home() {
   }, [fetchAllData]);
 
   useEffect(() => {
-if (isMounted && !isConnected && !isConnecting) {
-    // Base/Coinbase Smart Wallet konektörünü bul
+if (isMounted && wagmiStatus === 'disconnected') {
+    // Sadece Coinbase/Base konnektörünü hedefle
     const baseConnector = connectors.find((c) => c.id === 'coinbaseWalletSDK' || c.id === 'baseAccount');
     
     if (baseConnector) {
-      setIsConnecting(true);
-      connect(
-        { connector: baseConnector },
-        {
-          onSettled: () => setIsConnecting(false),
-          onError: (error) => {
-            console.error("Auto-connect error:", error);
-            setIsConnecting(false);
-          }
-        }
-      );
+      connect({ connector: baseConnector });
     }
   }
-}, [isMounted, isConnected, isConnecting, connectors, connect]);
+}, [isMounted, wagmiStatus, connectors, connect]);
 
   useEffect(() => {
     if (!searchQuery.trim()) { setSearchResults([]); return; }
@@ -221,8 +211,9 @@ if (isMounted && !isConnected && !isConnecting) {
 return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <AboutContent isConnected={false} />
+      
       <button 
-        disabled={isConnecting}
+        disabled={wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting'}
         onClick={() => {
           const c = connectors.find(c => c.id === 'coinbaseWalletSDK' || c.id === 'baseAccount') || connectors[0];
           if (c) connect({ connector: c });
@@ -230,18 +221,26 @@ return (
         style={{ 
           marginTop: '20px', 
           padding: '15px 30px', 
-          background: isConnecting ? '#333' : '#fff', 
-          color: isConnecting ? '#888' : '#000', 
+          background: '#fff', 
+          color: '#000', 
           borderRadius: '12px', 
           fontWeight: 'bold', 
           border: 'none', 
-          cursor: isConnecting ? 'not-allowed' : 'pointer', 
+          cursor: 'pointer', 
           width: '100%', 
-          maxWidth: '400px' 
+          maxWidth: '400px',
+          opacity: (wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting') ? 0.6 : 1
         }}
       >
-        {isConnecting ? "Connecting to Base..." : "Connect Wallet"}
+        { (wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting') ? "Connecting..." : "Connect Wallet" }
       </button>
+
+      {/* Hata durumunda manuel tetikleyici için küçük bir not */}
+      {wagmiStatus === 'disconnected' && (
+        <p style={{ color: '#666', fontSize: '0.8rem', marginTop: '10px' }}>
+          Not connecting? Try clicking the button above.
+        </p>
+      )}
     </div>
   );
 }

@@ -4,7 +4,8 @@
 import Link from "next/link";
 
 import { useEffect, useState, useCallback } from "react";
-import { useReadContract, useAccount, useConnect } from 'wagmi';
+import { useReadContract, useAccount, useConnect, useSignMessage, 
+  usePublicClient } from 'wagmi';
 import { useSendCalls } from 'wagmi/experimental'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
 
@@ -52,13 +53,19 @@ export default function Home() {
 
   // --- STATES ---
 
-  const addLog = (msg: string) => setDebugLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
+  
 
-  const [isLoading, setIsLoading] = useState(true); 
+  const { address: currentAddress, isConnected } = useAccount(); 
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { connect, connectors } = useConnect();
 
-  const { address: currentAddress, isConnected, chainId } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+
+  const publicClient = usePublicClient();
+  
+   const handleSignIn = () => {
+    connect({ connector: connectors[0] }); 
+  };
 
   const { signMessageAsync } = useSignMessage();
   
@@ -168,24 +175,19 @@ const formatUsername = (user: any) => {
 // --- INIT ---
 
 useEffect(() => {
-  const init = async () => {
+const init = async () => {
     try {
       await fetchAllData(); 
-      
-      // Veriler yüklendiğinde ve uygulama render edilmeye hazır olduğunda
-      if (!isLoading) {
-        // Built-in yöntem: Base App'e "hazırım, loading ekranını kaldır" der.
-        baseApp.send({ type: 'ready' }); 
-      }
     } catch (e: any) {
       console.error("Init Error:", e);
     } finally {
       setIsLoading(false); 
+  
     }
   };
 
   init();
-}, [fetchAllData, isLoading]);
+}, [fetchAllData]);
 
 
 
@@ -444,6 +446,7 @@ const handleDeleteNeed = async (id: string) => {
 
 // --- RENDER ---
 
+// Yükleme ekranı
 if (isLoading) {
   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -452,17 +455,16 @@ if (isLoading) {
   );
 }
 
-
-if (!isconnected) {
+if (!isConnected) { 
   return (
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
       
       <AboutContent />
 
       <button 
-        onClick={handleSignIn} 
-          style={{ 
+        onClick={handleSignIn}
+        style={{ 
           marginTop: '20px', 
           padding: '15px 30px', 
           background: '#fff', 
@@ -470,10 +472,10 @@ if (!isconnected) {
           borderRadius: '12px', 
           fontWeight: 'bold',
           border: 'none',
-          
+          cursor: 'pointer'
         }}
       >
-        
+        Connect with Base App
       </button>
 
       <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>

@@ -106,30 +106,10 @@ export default function Home() {
 
   const { sendCalls } = useSendCalls();
 
-
- // --- SIGN-IN ---
-
-  const coinbaseConnector = connectors.find(
-    (c) => c.id === 'coinbaseWalletSDK' || c.id === 'coinbaseWallet'
-  );
-  const injectedConnector = connectors.find(
-    (c) => c.id === 'injected'
-  );
-
-  // Base App'in kendi browser'ındaysa window.ethereum inject edilmiş olur
-  const isBaseAppBrowser = 
-    typeof window !== 'undefined' && 
-    (window.ethereum?.isCoinbaseWallet === true || 
-     (window as any).CoinbaseWalletSDK !== undefined);
-
-  if (isBaseAppBrowser && injectedConnector) {
-    connect({ connector: injectedConnector });
-  } else if (coinbaseConnector) {
-    connect({ connector: coinbaseConnector });
-  } else {
-    connect({ connector: connectors[0] });
-  }
+  const handleSignIn = () => {
+  connect({ connector: connectors[0] }); 
 };
+
 
   // --- DATA FETCHING ---
 
@@ -414,56 +394,9 @@ const handleDeleteNeed = async (id: string) => {
   }
 };
 
-  // --- RENDER GUARDS ---
-
-  if (isLoading) {
-    return (
-      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p>Loading Houra...</p>
-      </div>
-    );
-  }
-
-  if (!isConnected) {
-    return (
-      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
-        <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', textAlign: 'left' }}>
-          <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
-          <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
-            Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based tokens.
-          </p>
-          <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <p>📍 <strong>Profile:</strong> Set your location and what you offer to the community.</p>
-            <p>⏳ <strong>Earn:</strong> Help others with their needs and collect Houra tokens.</p>
-            <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
-          </div>
-          <hr style={{ borderColor: '#222' }} />
-          <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <p><strong>To Join Houra:</strong></p>
-            <p>1. Download the <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}>Base app</a>.</p>
-            <p>2. Create your wallet.</p>
-            <p>3. Search for <strong>"Houra"</strong> in the Base App and open it.</p>
-            <p>4. Register by <strong>saving your location and what you offer</strong>.</p>
-          </div>
-          <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
-            Read more about <Link href="https://en.wikipedia.org/wiki/Time-based_currency" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>Time-based currencies</Link>.
-          </p>
-        </div>
-        <button
-          onClick={handleSignIn}
-          style={{ marginTop: '20px', padding: '15px 30px', background: '#fff', color: '#000', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
-        >
-          Connect with Base App
-        </button>
-        <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
-      </div>
-    );
-  }
-
   // --- COMPONENTS ---
 
-  const AboutContent = () => (
+ const AboutContent = () => (
   <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', position: 'relative', textAlign: 'left' }}>
     <h2 style={{ marginTop: 0 }}>Welcome to Houra</h2>
     <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
@@ -474,20 +407,84 @@ const handleDeleteNeed = async (id: string) => {
       <p>⏳ <strong>Earn:</strong> Help others with their needs and collect Houra tokens.</p>
       <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
     </div>
+
+    {!isConnected && (
+      <>
+        <hr style={{ borderColor: '#222' }} />
+        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <p><strong>To Join Houra:</strong></p>
+          <p>1. Download the <a href="https://join.base.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', marginLeft: '5px', textDecoration: 'underline' }}> Base app</a> .</p>
+          <p>2. Create your wallet.</p>
+          <p>3. Search for <strong>"Houra"</strong> in the Base App and open it.</p>
+          <p>4. Register by <strong>saving your location and what you offer</strong>.</p>
+        </div>
+      </>
+    )}
+
     <p style={{ fontSize: '0.8rem', color: '#666', borderTop: '1px solid #222', paddingTop: '15px' }}>
-      Read more about <Link href="https://en.wikipedia.org/wiki/Time-based_currency" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>Time-based currencies</Link>.
+     Read more about <Link href="https://en.wikipedia.org/wiki/Time-based_currency" style={{ color: '#2563eb', marginLeft: '5px', textDecoration: 'underline' }}>
+  Time-based currencies
+</Link>.
     </p>
-    <hr style={{ borderColor: '#222' }} />
-    <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <p><strong>To Join Houra:</strong></p>
-      <p>1. Create your Base App wallet.</p>
-      <p>2. Register by <strong>saving your location and what you offer</strong>.</p>
-    </div>
-    <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>
-      Got it!
-    </button>
+
+    {isConnected && (
+      <>
+        <hr style={{ borderColor: '#222' }} />
+        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <p><strong>To Join Houra:</strong></p>
+          <p>1. Create your Base App wallet.</p>
+          <p>2. Register by <strong>saving your location and what you offer</strong>.</p>
+        </div>
+        <button onClick={() => setIsAboutOpen(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>
+          Got it!
+        </button>
+      </>
+    )}
   </div>
   );
+
+
+// --- RENDER ---
+
+// Yükleme ekranı
+if (isLoading) {
+  return (
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p>Loading Houra...</p>
+    </div>
+  );
+}
+
+if (!isConnected) { 
+  return (
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <img src="/houra-logo.png" alt="Houra" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
+      
+      <AboutContent />
+
+      <button 
+        onClick={handleSignIn}
+        style={{ 
+          marginTop: '20px', 
+          padding: '15px 30px', 
+          background: '#fff', 
+          color: '#000', 
+          borderRadius: '12px', 
+          fontWeight: 'bold',
+          border: 'none',
+          cursor: 'pointer'
+        }}
+      >
+        Connect with Base App
+      </button>
+
+<p style={{fontSize: '0.7rem', color: '#888', marginTop: '10px', textAlign: 'center'}}>
+  Connectors: {connectors.map(c => c.id).join(', ')}
+</p>
+      <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
+    </div>
+  );
+}
 
 
   return (

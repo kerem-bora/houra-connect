@@ -498,12 +498,6 @@ if (!isConnected) {
         Connect with Base App
       </button>
 
-{process.env.NODE_ENV === 'development' && (
-  <p style={{fontSize: '0.7rem', color: '#444'}}>
-    Connectors: {connectors.map(c => c.id).join(', ')}
-  </p>
-)}
-
 <p style={{fontSize: '0.7rem', color: '#888', marginTop: '10px', textAlign: 'center'}}>
   Connectors: {connectors.map(c => c.id).join(', ')}
 </p>

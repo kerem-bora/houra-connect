@@ -54,6 +54,7 @@ export default function Home() {
   // --- STATES ---
 
   
+  const [isLoading, setIsLoading] = useState(true);
 
   const { address: currentAddress, isConnected } = useAccount(); 
 

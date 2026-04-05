@@ -7,7 +7,7 @@ export const config = createConfig({
 
   multiInjectedProviderDiscovery: false, 
   connectors: [
-    // Base Account konnektörü en üstte olmalı
+  
     baseAccount({
       appName: 'Houra',
       preference: 'smartWalletOnly',

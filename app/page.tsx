@@ -4,34 +4,9 @@
 import Link from "next/link";
 
 import { useEffect, useState, useCallback } from "react";
-import { useReadContract, useAccount } from 'wagmi';
+import { useReadContract, useAccount, useConnect } from 'wagmi';
 import { useSendCalls } from 'wagmi/experimental'; 
 import { formatUnits, encodeFunctionData, parseUnits } from 'viem';
-import { http, createConfig, createStorage, cookieStorage } from 'wagmi';
-import { base } from 'wagmi/chains';
-import { baseAccount, injected } from 'wagmi/connectors';
-import { baseApp } from "@base-org/account";
-
-export const config = createConfig({
-  chains: [base],
-  connectors: [
-    injected(),
-    baseAccount({
-      appName: 'Houra',
-    }),
-  ],
-  storage: createStorage({ storage: cookieStorage }),
-  ssr: true,
-  transports: {
-    [base.id]: http(),
-  },
-});
-
-declare module 'wagmi' {
-  interface Register {
-    config: typeof config;
-  }
-}
 
 
 // --- CONFIG ---

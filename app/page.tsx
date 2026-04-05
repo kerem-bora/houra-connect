@@ -45,21 +45,34 @@ const AboutContent = ({ isConnected, onClose }: { isConnected: boolean, onClose?
   <div style={{ background: '#111', border: '1px solid #333', borderRadius: '24px', padding: '25px', maxWidth: '400px', width: '100%', textAlign: 'left' }}>
     <h2 style={{ marginTop: 0, color: '#fff' }}>Welcome to Houra</h2>
     <p style={{ fontSize: '0.9rem', color: '#ccc', lineHeight: '1.5' }}>
-      Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based tokens.
+      Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange skills for tokens.
     </p>
-    <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <p>📍 <strong>Profile:</strong> Set your location and what you offer.</p>
+    <div style={{ margin: '20px 0', fontSize: '0.85rem', color: '#eee', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <p>📍 <strong>Profile:</strong> Set your location and skills.</p>
       <p>⏳ <strong>Earn:</strong> Help others and collect Houra tokens.</p>
-      <p>🛠️ <strong>Post:</strong> Share what you need and reward others.</p>
+      <p>🛠️ <strong>Post:</strong> Share your needs and reward others.</p>
     </div>
+
+    {!isConnected && (
+      <>
+        <hr style={{ borderColor: '#222' }} />
+        <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <p>1. Create your Base App wallet.</p>
+          <p>2. Register by saving your location and what you offer.</p>
+        </div>
+      </>
+    )}
+
     {isConnected && onClose && (
-      <button onClick={onClose} style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}>
+      <button 
+        onClick={onClose} 
+        style={{ width: '100%', padding: '12px', background: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginTop: '15px', cursor: 'pointer' }}
+      >
         Got it!
       </button>
     )}
   </div>
 );
-
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

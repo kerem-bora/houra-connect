@@ -69,7 +69,9 @@ const AboutContent = ({ isConnected, onClose }: { isConnected: boolean, onClose?
 
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
+  const shouldShowDashboard = isConnected || wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting';
   const [isConnecting, setIsConnecting] = useState(false);
+const isMountedAndReady = isMounted && (isConnected || wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting');
   const { address: currentAddress, isConnected, status: wagmiStatus } = useAccount();
   const { connect, connectors } = useConnect();
   const { sendCalls } = useSendCalls();
@@ -205,58 +207,60 @@ if (isMounted && wagmiStatus === 'disconnected') {
     });
   }, [sendCalls, refetchBalance, selectedRecipient, sendAmount]);
 
-  if (!isMounted) return null;
+ if (!isMounted) return null;
 
-  if (!isConnected) {
-return (
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <AboutContent isConnected={false} />
-      
-      <button 
-        disabled={wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting'}
-        onClick={() => {
-          const c = connectors.find(c => c.id === 'coinbaseWalletSDK' || c.id === 'baseAccount') || connectors[0];
-          if (c) connect({ connector: c });
-        }}
-        style={{ 
-          marginTop: '20px', 
-          padding: '15px 30px', 
-          background: '#fff', 
-          color: '#000', 
-          borderRadius: '12px', 
-          fontWeight: 'bold', 
-          border: 'none', 
-          cursor: 'pointer', 
-          width: '100%', 
-          maxWidth: '400px',
-          opacity: (wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting') ? 0.6 : 1
-        }}
-      >
-        { (wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting') ? "Connecting..." : "Connect Wallet" }
-      </button>
+ if (!isConnected && !isUserTryingToConnect) {
+    return (
+      <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <AboutContent isConnected={false} />
+        
+        <button 
+          onClick={() => {
+            const c = connectors.find(c => c.id === 'coinbaseWalletSDK' || c.id === 'baseAccount') || connectors[0];
+            if (c) connect({ connector: c });
+          }}
+          style={{ 
+            marginTop: '20px', padding: '15px 30px', background: '#fff', color: '#000', 
+            borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', 
+            width: '100%', maxWidth: '400px' 
+          }}
+        >
+          Connect Wallet
+        </button>
 
-      {/* Hata durumunda manuel tetikleyici için küçük bir not */}
-      {wagmiStatus === 'disconnected' && (
-        <p style={{ color: '#666', fontSize: '0.8rem', marginTop: '10px' }}>
-          Not connecting? Try clicking the button above.
-        </p>
-      )}
-    </div>
-  );
-}
-  return (
+        {wagmiStatus === 'disconnected' && (
+          <p style={{ color: '#666', fontSize: '0.8rem', marginTop: '10px' }}>
+            Not connecting? Try clicking the button above.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+   return (
     <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ margin: 0 }}>Houra</h1>
-        <button onClick={() => setIsAboutOpen(true)} style={{ background: '#222', color: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>i</button>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Status Indicator */}
+          {!isConnected && isUserTryingToConnect && (
+            <span style={{ fontSize: '0.7rem', color: '#3b82f6' }}>Connecting...</span>
+          )}
+          {isConnected && currentAddress && (
+            <span style={{ fontSize: '0.7rem', color: '#666' }}>
+              {currentAddress.slice(0,6)}...{currentAddress.slice(-4)}
+            </span>
+          )}
+          <button onClick={() => setIsAboutOpen(true)} style={{ background: '#222', color: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>i</button>
+        </div>
       </div>
 
       {isAboutOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <AboutContent isConnected={true} onClose={() => setIsAboutOpen(false)} />
+          <AboutContent isConnected={isConnected} onClose={() => setIsAboutOpen(false)} />
         </div>
       )}
-
       {/* 1. SEND PANEL */}
       <div style={{ padding: '20px', borderRadius: '24px', background: 'linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)', marginBottom: '20px' }}>
         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>SEND HOURA TO:</label>

@@ -56,6 +56,10 @@ export default function Home() {
   
   const [isLoading, setIsLoading] = useState(true);
 
+  const [isMounted, setIsMounted] = useState(false);
+
+  const [isConnecting, setIsConnecting] = useState(false);
+
   const { address: currentAddress, isConnected } = useAccount(); 
 
   const { connect, connectors } = useConnect();

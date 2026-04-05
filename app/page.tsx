@@ -66,10 +66,6 @@ export default function Home() {
    const handleSignIn = () => {
     connect({ connector: connectors[0] }); 
   };
-
-  const { signMessageAsync } = useSignMessage();
-  
-  const publicClient = usePublicClient();
   
   const [location, setLocation] = useState("");
 

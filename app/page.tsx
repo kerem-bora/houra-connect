@@ -409,7 +409,7 @@ const handleDeleteNeed = async (id: string) => {
       <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
     </div>
 
-    {!isAuthenticated && (
+    {!isConnected && (
       <>
         <hr style={{ borderColor: '#222' }} />
         <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -428,7 +428,7 @@ const handleDeleteNeed = async (id: string) => {
 </Link>.
     </p>
 
-    {isAuthenticated && (
+    {isConnected && (
       <>
         <hr style={{ borderColor: '#222' }} />
         <div style={{ margin: '20px 0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>

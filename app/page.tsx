@@ -107,8 +107,11 @@ export default function Home() {
   const { sendCalls } = useSendCalls();
 
   const handleSignIn = () => {
-  connect({ connector: connectors[0] }); 
-};
+    const injected = connectors.find(c => c.id === 'injected');
+    const baseAccount = connectors.find(c => c.id === 'baseAccount');
+    const connector = injected ?? baseAccount ?? connectors[0];
+    connect({ connector });
+  };
 
 
   // --- DATA FETCHING ---
@@ -478,9 +481,6 @@ if (!isConnected) {
         Connect with Base App
       </button>
 
-<p style={{fontSize: '0.7rem', color: '#888', marginTop: '10px', textAlign: 'center'}}>
-  Connectors: {connectors.map(c => c.id).join(', ')}
-</p>
       <p style={{ marginTop: '30px', fontSize: '0.75rem', color: '#444' }}>Houra Time Economy - 2026</p>
     </div>
   );

@@ -7,25 +7,20 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Schema validation including the new nick field
+
 const ProfileSchema = z.object({
-  fid: z.number(),
-  username: z.string().min(1).trim(),
-  pfp: z.string().optional().nullable(),
-  // NICK alanı eklendi
+  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   nick: z.string().optional().nullable().transform(val => val?.trim() || null),
   city: z
     .string()
     .optional()
     .nullable()
-    .transform(val => val?.trim().replace(/<[^>]*>/g, "") || null),
+    .transform(val => val?.trim().replace(/<[^>]*>/g, "") || "Global"),
   talents: z
     .string()
     .optional()
     .nullable()
-    .transform(val => val?.trim().replace(/<[^>]*>/g, "") || null),
-  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  token: z.string().optional(), 
+    .transform(val => val?.trim().replace(/<[^>]*>/g, "") || ""),
 });
 
 export async function POST(req: Request) {
@@ -37,38 +32,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
-    const { fid, username, city, talents, address, nick } = validation.data;
+    const { address, nick, city, talents } = validation.data;
 
-    // Security check: Verify FID from headers matches the body
-    const headerFid = req.headers.get("x-farcaster-fid");
-    if (!headerFid || Number(headerFid) !== fid) {
-      return NextResponse.json({ error: "Profile is not verified (FID mismatch)" }, { status: 401 });
-    }
-
-    // Wallet ownership check
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('wallet_address')
-      .eq('fid', fid)
-      .maybeSingle();
-
-    if (existingProfile && existingProfile.wallet_address.toLowerCase() !== address.toLowerCase()) {
-      return NextResponse.json({ 
-        error: "Access Denied: Wallet mismatch" 
-      }, { status: 403 });
-    }
-
-    // Upsert profile data including the new nick column
     const { error: dbError } = await supabase
       .from('profiles')
       .upsert({
-        fid: fid,
-        username: username,
-        nick: nick,
-        city: city || "Global",
-        bio: talents || "",
         wallet_address: address.toLowerCase(), 
-      }, { onConflict: 'fid' });
+        nick: nick,
+        city: city,
+        bio: talents, 
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'wallet_address' });
 
     if (dbError) throw dbError;
 
@@ -83,10 +57,9 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const fid = searchParams.get("fid");
+    const address = searchParams.get("address");
 
-    // Fetch all profiles if no specific FID is provided
-    if (!fid) {
+      if (!address) {
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
@@ -94,21 +67,19 @@ export async function GET(req: Request) {
 
       if (error) throw error;
 
-      // Map profiles to include a fallback display_name
       const formattedProfiles = profiles.map(p => ({
         ...p,
-        talents: p.bio, // Ensure UI compatibility
-        display_name: p.nick || p.username // Fallback to username if nick is null
+        talents: p.bio, 
+        display_name: p.nick || "Anonymous" 
       }));
 
       return NextResponse.json({ profiles: formattedProfiles });
     }
 
-    // Fetch a single profile by FID
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('fid', Number(fid))
+      .eq('wallet_address', address.toLowerCase())
       .maybeSingle(); 
 
     if (error) throw error;
@@ -117,7 +88,7 @@ export async function GET(req: Request) {
       profile: data ? { 
         ...data, 
         talents: data.bio,
-        display_name: data.nick || data.username 
+        display_name: data.nick || "Anonymous" 
       } : null 
     });
   } catch (error: any) {

@@ -8,6 +8,7 @@ const supabase = createClient(
 );
 
 const NeedSchema = z.object({
+  fid: z.number(),
   username: z.string().min(1).max(50).trim(),
   location: z
     .string()
@@ -44,14 +45,34 @@ export async function POST(req: Request) {
     const validation = NeedSchema.safeParse(body);
     
     if (!validation.success) {
+      console.error("Validation Error:", validation.error.format());
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
-    const { username, location, text, price, wallet_address } = validation.data;
+    const { fid, username, location, text, price, wallet_address } = validation.data;
+
+    const headerFid = req.headers.get("x-farcaster-fid");
+    if (!headerFid || Number(headerFid) !== fid) {
+      return NextResponse.json({ error: "Identity mismatch!" }, { status: 401 });
+    }
+
+     const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('wallet_address')
+      .eq('fid', fid)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Profile not found. Please create a profile first." }, { status: 403 });
+    }
+
+    if (profile.wallet_address.toLowerCase() !== wallet_address.toLowerCase()) {
+      return NextResponse.json({ error: "Wallet address mismatch with profile!" }, { status: 403 });
+    }
 
     const { count } = await supabase.from('needs')
       .select('*', { count: 'exact', head: true })
-      .eq('wallet_address', wallet_address.toLowerCase())
+      .eq('fid', fid)
       .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
     if (count !== null && count >= 3) {
@@ -59,6 +80,7 @@ export async function POST(req: Request) {
     }
 
     const { error: dbError } = await supabase.from('needs').insert([{
+      fid, 
       username, 
       location, 
       text, 
@@ -80,14 +102,20 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const idValue = searchParams.get('id'); 
-    const body = await req.json(); // frontend'den { address } geliyor
+    const fidValue = searchParams.get('fid');
+    const body = await req.json();
 
-    if (!idValue || !body.address) {
+    if (!idValue || !fidValue || !body.address) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    const { error, count } = await supabase.from('needs')
-      .delete()
+    const headerFid = req.headers.get("x-farcaster-fid");
+    if (!headerFid || Number(headerFid) !== Number(fidValue)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const { data, error, count } = await supabase.from('needs')
+      .delete({ count: 'planned' })
       .eq('id', idValue)
       .eq('wallet_address', body.address.toLowerCase()); 
 

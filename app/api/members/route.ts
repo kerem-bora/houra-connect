@@ -16,12 +16,15 @@ export async function GET() {
 
     if (lbError) throw lbError;
 
-    // 2. Profilleri çek (NICK alanını buraya ekledik)
+    // 2. Profilleri çek - FID KOLONU BURADAN KALDIRILDI
     const { data: profData, error: profError } = await supabase
       .from('profiles')
-      .select('username, nick, wallet_address, fid'); 
+      .select('nick, wallet_address'); // username de sildiysek sadece nick ve wallet_address bırak
 
-    if (profError) throw profError;
+    if (profError) {
+      console.error("Profile fetch error:", profError);
+      // Profil çekilemese bile leaderboard verisini bozmamak için boş dizi atayalım
+    }
 
     // 3. Eşleştirme ve Veri Formatlama
     const results = (lbData || []).map(entry => {
@@ -33,12 +36,10 @@ export async function GET() {
         tx_count: entry.tx_count,
         rank: entry.rank,
         wallet_address: entry.wallet_address,
-        fid: p?.fid, // Profil kartını açabilmek için FID önemli
+        // fid: p?.fid, <--- BU SATIR SİLİNDİ (Hata kaynağı buydu)
         profiles: p ? { 
-          username: p.username, 
           nick: p.nick,
-          // Frontend'deki formatUsername için display_name ekliyoruz
-          display_name: p.nick || p.username 
+          display_name: p.nick || "Anonymous" 
         } : null
       };
     });

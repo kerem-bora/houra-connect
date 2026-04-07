@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
     const { address, nick, city, talents } = validation.data;
 
+
     const { error: dbError } = await supabase
       .from('profiles')
       .upsert({
@@ -41,8 +42,7 @@ export async function POST(req: Request) {
         nick: nick,
         city: city,
         bio: talents, 
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'wallet_address' });
+      }, { onConflict: 'wallet_address' }); 
 
     if (dbError) throw dbError;
 
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const address = searchParams.get("address");
 
-      if (!address) {
+    if (!address) {
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
@@ -67,13 +67,13 @@ export async function GET(req: Request) {
 
       if (error) throw error;
 
-      const formattedProfiles = profiles.map(p => ({
-        ...p,
-        talents: p.bio, 
-        display_name: p.nick || "Anonymous" 
-      }));
-
-      return NextResponse.json({ profiles: formattedProfiles });
+      return NextResponse.json({ 
+        profiles: profiles.map(p => ({
+          ...p,
+          talents: p.bio, 
+          display_name: p.nick || "Anonymous" 
+        })) 
+      });
     }
 
     const { data, error } = await supabase

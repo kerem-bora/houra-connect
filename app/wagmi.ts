@@ -1,15 +1,16 @@
 import { http, createConfig, createStorage, cookieStorage } from 'wagmi';
 import { base } from 'wagmi/chains';
-import { baseAccount } from 'wagmi/connectors';
-
+import { baseAccount, injected } from 'wagmi/connectors';
 export const config = createConfig({
   chains: [base],
-  multiInjectedProviderDiscovery: false,
+  multiInjectedProviderDiscovery: false, 
   connectors: [
+
     baseAccount({
       appName: 'Houra',
       preference: 'smartWalletOnly',
     }),
+    injected(),
   ],
   storage: createStorage({
     storage: cookieStorage,
@@ -19,7 +20,6 @@ export const config = createConfig({
     [base.id]: http(),
   },
 });
-
 declare module 'wagmi' {
   interface Register {
     config: typeof config;

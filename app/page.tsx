@@ -7,7 +7,6 @@ import {
   useWriteContract,
   useAccount,
   useConnect,
-  useDisconnect,
 } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 
@@ -129,7 +128,6 @@ export default function Home() {
   // --- WALLET ---
   const { address: currentAddress, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
-  const { disconnect } = useDisconnect();
   const { writeContractAsync } = useWriteContract(); // replaces useSendCalls
 
   // --- UI STATE ---
@@ -508,16 +506,10 @@ export default function Home() {
           <img src="/houra-logo.png" alt="Houra" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
           <h1 style={{ margin: 0, fontSize: "1.8rem" }}>Houra</h1>
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <button
-            onClick={() => setIsAboutOpen(true)}
-            style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", fontStyle: "italic", fontFamily: "serif", fontSize: "1.1rem" }}
-          >i</button>
-          <button
-            onClick={() => disconnect()}
-            style={{ background: "transparent", border: "1px solid #333", color: "#666", borderRadius: "10px", padding: "5px 12px", cursor: "pointer", fontSize: "0.75rem" }}
-          >Disconnect</button>
-        </div>
+        <button
+          onClick={() => setIsAboutOpen(true)}
+          style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", fontStyle: "italic", fontFamily: "serif", fontSize: "1.1rem" }}
+        >i</button>
       </div>
 
       {/* ABOUT MODAL */}

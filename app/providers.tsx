@@ -8,13 +8,15 @@ export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   const [reconnect, setReconnect] = useState(false);
 
-  useEffect(() => {
-    const isBaseApp =
-      navigator.userAgent.includes('CoinbaseBrowser') ||
-      !!(window as any).ethereum?.isCoinbaseBrowser ||
-      !!(window as any).ethereum?.isCoinbaseWallet;
-    setReconnect(isBaseApp);
-  }, []);
+useEffect(() => {
+  const eth = (window as any).ethereum;
+  const isBaseApp =
+    !!eth?.isCoinbaseBrowser ||
+    !!eth?.isCoinbaseWallet ||
+    !!eth?.isWalletLink ||
+    eth !== undefined;
+  setReconnect(isBaseApp);
+}, []);
 
   return (
     <WagmiProvider config={config} reconnectOnMount={reconnect}>

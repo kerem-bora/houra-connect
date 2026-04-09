@@ -421,7 +421,8 @@ export default function Home() {
           <hr style={{ borderColor: "#222" }} />
           <div style={{ margin: "20px 0", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "10px" }}>
             <p><strong>To Join Houra:</strong></p>
-            <p>1. Connect your Ethereum wallet.</p>
+            <p>1. Connect your Ethereum wallet, or open Houra in <a href="https://join.base.app" target="_blank">Base App
+                </a>.</p>
             <p>2. Save your location and what you offer to register.</p>
           </div>
         </>

@@ -105,7 +105,7 @@ const WalletModal = ({
               cursor: "pointer", fontSize: "0.95rem",
             }}
           >
-            {c.name}
+            {c.id === "injected" ? "Other Ethereum Wallet" : c.name}
           </button>
         ))}
       </div>
@@ -710,12 +710,6 @@ export default function Home() {
               >
                 SEND 1 HOURA ⏳
               </button>
-            <button
-  onClick={() => { window.location.href = `https://base.app/profile/${selectedMember.wallet_address || selectedMember.address}`; }}
-  style={{ width: "100%", padding: "10px", borderRadius: "14px", background: "transparent", color: "#666", fontWeight: "500", border: "1px solid #333", cursor: "pointer", fontSize: "0.8rem", textDecoration: "none", display: "block", textAlign: "center" }}
->
-  View Base Profile
-</button>
             </div>
           </div>
         </div>

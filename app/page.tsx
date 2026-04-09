@@ -242,6 +242,11 @@ export default function Home() {
     if (activeModal === "active members") fetchLeaderboard();
   }, [activeModal, fetchLeaderboard]);
 
+useEffect(() => {
+  console.log('UA:', navigator.userAgent);
+  console.log('ethereum:', JSON.stringify(Object.keys((window as any).ethereum || {})));
+}, []);
+
   // ---------------------------------------------------------------------------
   // LIVE SEARCH – send panel
   // ---------------------------------------------------------------------------

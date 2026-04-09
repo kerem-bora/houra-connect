@@ -327,7 +327,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address:        currentAddress.toLowerCase(),
-          username:       nickname || "Anonymous",
+          username:       needNickname || "Anonymous",
           location:       needLocation || "Global",
           text:           needText,
           wallet_address: currentAddress.toLowerCase(),
@@ -659,7 +659,7 @@ export default function Home() {
         <summary style={{ cursor: "pointer", fontWeight: "bold", color: "#9ca3af" }}>⚙️ Profile Settings</summary>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
           <input
-            placeholder="Nickname (optional)"
+            placeholder="Username"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             style={{ padding: "12px", background: "#000", color: "#fff", border: "1px solid #333", borderRadius: "10px" }}

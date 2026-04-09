@@ -1,16 +1,23 @@
 "use client";
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { WagmiProvider } from 'wagmi';
-import { config } from './wagmi'; // wagmi.ts dosyasındaki config'i içeri alıyoruz
+import { config } from './wagmi';
 
 export function Providers({ children }: { children: ReactNode }) {
-  // QueryClient'ı sadece bir kez oluşturmak için useState kullanıyoruz
   const [queryClient] = useState(() => new QueryClient());
+  const [reconnect, setReconnect] = useState(false);
+
+  useEffect(() => {
+    const isBaseApp =
+      navigator.userAgent.includes('CoinbaseBrowser') ||
+      !!(window as any).ethereum?.isCoinbaseBrowser ||
+      !!(window as any).ethereum?.isCoinbaseWallet;
+    setReconnect(isBaseApp);
+  }, []);
 
   return (
-    <WagmiProvider config={config} reconnectOnMount={false}>
+    <WagmiProvider config={config} reconnectOnMount={reconnect}>
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>

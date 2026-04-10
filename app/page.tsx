@@ -496,7 +496,41 @@ export default function Home() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={{ backgroundColor: "#000", color: "#fff", minHeight: "100vh", padding: "20px", fontFamily: "sans-serif" }}>
+    <div style={{ backgroundColor: "#000", color: "#fff", minHeight: "100vh", fontFamily: "sans-serif" }}>
+      <style>{`
+        .houra-content {
+          width: 100%;
+          padding: 20px;
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
+        @media (min-width: 768px) {
+          .houra-content {
+            width: 50%;
+            padding: 30px 20px;
+          }
+        }
+        .houra-toast {
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: calc(100% - 40px);
+          max-width: 600px;
+          padding: 15px;
+          background: #000;
+          border: 1px solid #2563eb;
+          border-radius: 15px;
+          text-align: center;
+          z-index: 3000;
+        }
+        @media (min-width: 768px) {
+          .houra-toast {
+            width: calc(50% - 40px);
+          }
+        }
+      `}</style>
+    <div className="houra-content">
 
       {/* HEADER */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
@@ -791,7 +825,7 @@ export default function Home() {
                         <div style={{ color: "#555", fontSize: "0.7rem" }}>{member.tx_count} Houra exchanges</div>
                       </div>
                     </div>
-                  )) : <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>No activity found.</p>}
+                  )) : <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>Loading...</p>}
                 </div>
               )}
 
@@ -802,12 +836,13 @@ export default function Home() {
 
       {/* STATUS TOAST */}
       {status && (
-        <div style={{ position: "fixed", bottom: "20px", left: "20px", right: "20px", padding: "15px", background: "#000", border: "1px solid #2563eb", borderRadius: "15px", textAlign: "center", zIndex: 3000 }}>
+        <div className="houra-toast">
           {status}
         </div>
       )}
 
       <p style={{ textAlign: "center", marginTop: "40px", fontSize: "0.75rem", color: "#444" }}>Houra Time Economy - 2026</p>
+    </div>
     </div>
   );
 }

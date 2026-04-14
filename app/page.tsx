@@ -163,6 +163,9 @@ export default function Home() {
   // --- LEADERBOARD ---
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
+  // --- COMMUNITY FILTER ---
+  const [communityFilter, setCommunityFilter] = useState("All");
+
   // ---------------------------------------------------------------------------
   // WALLET HELPERS
   // ---------------------------------------------------------------------------
@@ -238,6 +241,7 @@ export default function Home() {
 
   useEffect(() => {
     if (activeModal === "active members") fetchLeaderboard();
+    setCommunityFilter("All");
   }, [activeModal, fetchLeaderboard]);
 
   // ---------------------------------------------------------------------------
@@ -688,12 +692,15 @@ export default function Home() {
             onChange={(e) => setNickname(e.target.value)}
             style={{ padding: "12px", background: "#000", color: "#fff", border: "1px solid #333", borderRadius: "10px" }}
           />
-          <input
-            placeholder="Location"
+          <select
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            style={{ padding: "12px", background: "#000", color: "#fff", border: "1px solid #333", borderRadius: "10px" }}
-          />
+            style={{ padding: "12px", background: "#000", color: location ? "#fff" : "#6b7280", border: "1px solid #333", borderRadius: "10px", appearance: "auto" }}
+          >
+            <option value="" disabled>Community</option>
+            <option value="Adalar, İstanbul">Adalar, İstanbul</option>
+            <option value="Other">Other</option>
+          </select>
           <textarea
             placeholder="What do you offer?"
             value={offer}
@@ -754,13 +761,29 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", backdropFilter: "blur(10px)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <div style={{ background: "#111", border: "1px solid #333", borderRadius: "24px", padding: "25px", width: "100%", maxWidth: "450px", maxHeight: "80vh", overflowY: "auto", position: "relative" }}>
             <button onClick={() => setActiveModal(null)} style={{ position: "absolute", top: "15px", right: "15px", background: "none", border: "none", color: "#666", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
-            <h3 style={{ marginTop: 0, color: "#2563eb", textTransform: "capitalize" }}>{activeModal}</h3>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+              <h3 style={{ marginTop: 0, marginBottom: 0, color: "#2563eb", textTransform: "capitalize" }}>{activeModal}</h3>
+              {(activeModal === "needs" || activeModal === "offers" || activeModal === "active members") && (
+                <select
+                  value={communityFilter}
+                  onChange={(e) => setCommunityFilter(e.target.value)}
+                  style={{ padding: "6px 10px", background: "#000", color: "#fff", border: "1px solid #2563eb44", borderRadius: "8px", fontSize: "0.8rem", cursor: "pointer" }}
+                >
+                  <option value="All">All</option>
+                  <option value="Adalar, İstanbul">Adalar, İstanbul</option>
+                  <option value="Other">Other</option>
+                </select>
+              )}
+            </div>
 
             <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
 
               {/* NEEDS */}
-              {activeModal === "needs" && (
-                needs.length > 0 ? needs.map((need: any, idx: number) => {
+              {activeModal === "needs" && (() => {
+                const filtered = needs.filter((need: any) =>
+                  communityFilter === "All" || need.location === communityFilter
+                );
+                return filtered.length > 0 ? filtered.map((need: any, idx: number) => {
                   const ownerProfile = offerResults.find(
                     (p) => p.wallet_address?.toLowerCase() === need.wallet_address?.toLowerCase()
                   );
@@ -781,12 +804,15 @@ export default function Home() {
                       </div>
                     </div>
                   );
-                }) : <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>No needs found.</p>
-              )}
+                }) : <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>No needs found.</p>;
+              })()}
 
               {/* OFFERS */}
-              {activeModal === "offers" && (
-                offerResults.length > 0 ? offerResults.map((user: any, idx: number) => (
+              {activeModal === "offers" && (() => {
+                const filtered = offerResults.filter((user: any) =>
+                  communityFilter === "All" || user.city === communityFilter
+                );
+                return filtered.length > 0 ? filtered.map((user: any, idx: number) => (
                   <div key={idx} style={{ padding: "16px", background: "#000", borderRadius: "20px", border: "1px solid #222" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                       <span style={{ fontWeight: "bold", fontSize: "0.9rem" }}>{formatUsername(user)}</span>
@@ -797,8 +823,8 @@ export default function Home() {
                       <button onClick={() => setSelectedMember(user)} style={{ padding: "6px 12px", borderRadius: "20px", background: "rgba(37,99,235,0.1)", color: "#3b82f6", fontSize: "0.7rem", border: "1px solid rgba(37,99,235,0.2)", cursor: "pointer" }}>VIEW PROFILE</button>
                     </div>
                   </div>
-                )) : <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>No offers found.</p>
-              )}
+                )) : <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>No offers found.</p>;
+              })()}
 
               {/* COMMUNITIES */}
               {activeModal === "communities" && (
@@ -812,22 +838,32 @@ export default function Home() {
               )}
 
               {/* ACTIVE MEMBERS */}
-              {activeModal === "active members" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-                  {leaderboard.length > 0 ? leaderboard.map((member, index) => (
-                    <div
-                      key={member.wallet_address}
-                      style={{ padding: "12px", background: "#000", borderRadius: "12px", border: index === 0 ? "1px solid #3b82f6" : "1px solid #222", display: "flex", alignItems: "center" }}
-                    >
-                      <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: index === 0 ? "#3b82f6" : "#666", marginRight: "12px" }}>#{index + 1}</span>
-                      <div>
-                        <div style={{ color: "#fff", fontSize: "0.9rem", fontWeight: "bold" }}>{formatUsername(member.profiles || member)}</div>
-                        <div style={{ color: "#555", fontSize: "0.7rem" }}>{member.tx_count} Houra exchanges</div>
-                      </div>
-                    </div>
-                  )) : <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>Loading...</p>}
-                </div>
-              )}
+              {activeModal === "active members" && (() => {
+                const filtered = leaderboard.filter((member) =>
+                  communityFilter === "All" || (member.profiles?.city ?? member.city) === communityFilter
+                );
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                    {leaderboard.length === 0
+                      ? <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>Loading...</p>
+                      : filtered.length > 0
+                        ? filtered.map((member, index) => (
+                          <div
+                            key={member.wallet_address}
+                            style={{ padding: "12px", background: "#000", borderRadius: "12px", border: index === 0 ? "1px solid #3b82f6" : "1px solid #222", display: "flex", alignItems: "center" }}
+                          >
+                            <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: index === 0 ? "#3b82f6" : "#666", marginRight: "12px" }}>#{index + 1}</span>
+                            <div>
+                              <div style={{ color: "#fff", fontSize: "0.9rem", fontWeight: "bold" }}>{formatUsername(member.profiles || member)}</div>
+                              <div style={{ color: "#555", fontSize: "0.7rem" }}>{member.tx_count} Houra exchanges</div>
+                            </div>
+                          </div>
+                        ))
+                        : <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem" }}>No members found.</p>
+                    }
+                  </div>
+                );
+              })()}
 
             </div>
           </div>

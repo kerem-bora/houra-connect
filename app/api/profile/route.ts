@@ -44,7 +44,16 @@ export async function POST(req: Request) {
         bio: talents, 
       }, { onConflict: 'wallet_address' }); 
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      // PostgreSQL unique constraint violation
+      if (dbError.code === "23505" && dbError.message.includes("nick")) {
+        return NextResponse.json(
+          { error: "This username is already taken." },
+          { status: 409 }
+        );
+      }
+      throw dbError;
+    }
 
     return NextResponse.json({ success: true });
 

@@ -328,7 +328,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          location:       needLocation || "Global",
+          location:       needLocation || "Other",
           text:           needText,
           wallet_address: currentAddress.toLowerCase(),
           price:          needPrice.toString(),
@@ -411,7 +411,7 @@ export default function Home() {
         Houra is a peer-to-peer <strong>Time Economy</strong> platform where you exchange your skills for time-based tokens.
       </p>
       <div style={{ margin: "20px 0", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "10px" }}>
-        <p>📍 <strong>Profile:</strong> Set your location and what you offer to the community.</p>
+        <p>📍 <strong>Profile:</strong> Choose your community and what you offer.</p>
         <p>⏳ <strong>Earn:</strong> Help others with their needs and collect Houra tokens.</p>
         <p>🛠️ <strong>Post:</strong> Share what you need and reward those who give their time.</p>
       </div>
@@ -423,7 +423,7 @@ export default function Home() {
             <p><strong>To Join Houra:</strong></p>
             <p>1. Connect your Ethereum wallet, or open Houra in <a href="https://join.base.app" target="_blank" style={{ color: "#2563eb", textDecoration: "underline" }}>Base App.
                 </a></p>
-            <p>2. Save your location and what you offer to register.</p>
+            <p>2. Choose your community and what you offer to register.</p>
           </div>
         </>
       )}
@@ -623,7 +623,7 @@ export default function Home() {
       <div style={{ marginBottom: "20px" }}>
         <h3 style={{ fontSize: "1rem", marginBottom: "10px", color: "#fff" }}>Search for Offers</h3>
         <input
-          placeholder="Search offer, location, or user…"
+          placeholder="Search offer, community, or user…"
           value={offerQuery}
           onChange={(e) => setOfferQuery(e.target.value)}
           style={{ width: "100%", padding: "12px", borderRadius: "12px", background: "#111", border: "1px solid #333", color: "#fff", boxSizing: "border-box" }}
@@ -653,15 +653,15 @@ export default function Home() {
       <details style={{ background: "#111", padding: "12px", borderRadius: "15px", marginBottom: "20px", border: "1px solid #222" }}>
         <summary style={{ cursor: "pointer", fontWeight: "bold", color: "#9ca3af" }}>➕ Add Your Need</summary>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <input
-              placeholder="Location"
-              value={needLocation}
-              onChange={(e) => setNeedLocation(e.target.value)}
-              style={{ flex: 1, padding: "12px", background: "#000", color: "#fff", border: "1px solid #333", borderRadius: "10px" }}
-            />
-            <button onClick={() => setNeedLocation("Online")} style={{ padding: "0 15px", background: "#222", color: "#fff", border: "1px solid #333", borderRadius: "10px", fontSize: "0.8rem", cursor: "pointer" }}>Online</button>
-          </div>
+          <select
+            value={needLocation}
+            onChange={(e) => setNeedLocation(e.target.value)}
+            style={{ padding: "12px", background: "#000", color: needLocation ? "#fff" : "#6b7280", border: "1px solid #333", borderRadius: "10px" }}
+          >
+            <option value="" disabled>Community</option>
+            <option value="Adalar, İstanbul">Adalar, İstanbul</option>
+            <option value="Online">Online</option>
+          </select>
           <textarea
             placeholder="What do you need?"
             value={needText}
@@ -761,8 +761,8 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", backdropFilter: "blur(10px)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <div style={{ background: "#111", border: "1px solid #333", borderRadius: "24px", padding: "25px", width: "100%", maxWidth: "450px", maxHeight: "80vh", overflowY: "auto", position: "relative" }}>
             <button onClick={() => setActiveModal(null)} style={{ position: "absolute", top: "15px", right: "15px", background: "none", border: "none", color: "#666", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-              <h3 style={{ marginTop: 0, marginBottom: 0, color: "#2563eb", textTransform: "capitalize" }}>{activeModal}</h3>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", paddingRight: "30px" }}>
+              <h3 style={{ marginTop: 0, marginBottom: 0, color: "#2563eb", textTransform: "capitalize", textAlign: "center" }}>{activeModal}</h3>
               {(activeModal === "needs" || activeModal === "offers" || activeModal === "active members") && (
                 <select
                   value={communityFilter}

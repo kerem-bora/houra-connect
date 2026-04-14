@@ -508,6 +508,19 @@ export default function Home() {
           margin: 0 auto;
           box-sizing: border-box;
         }
+@keyframes flowGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.rainbow-panel {
+  /* Logo renk paletinden esinlenen genişletilmiş gradient */
+  background: linear-gradient(-45deg, #2563eb, #0ea5e9, #10b981, #f59e0b, #ef4444, #7e22ce);
+  background-size: 400% 400%;
+  animation: flowGradient 15s ease infinite;
+  border: none !important;
+}
         @media (min-width: 768px) {
           .houra-content {
             width: 50%;
@@ -558,7 +571,7 @@ export default function Home() {
       <p />
 
       {/* 1. SEND PANEL */}
-      <div style={{ padding: "20px", borderRadius: "24px", background: "linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)", marginBottom: "20px" }}>
+      <div className="rainbow-panel" style={{ boxShadow: "0 10px 30px -10px rgba(0,0,0,0.5)", padding: "20px", borderRadius: "24px", background: "linear-gradient(135deg, #1e40af 0%, #7e22ce 100%)", marginBottom: "20px" }}>
         <label style={{ fontSize: "0.7rem", fontWeight: "bold", display: "block", marginBottom: "8px" }}>SEND HOURA TO:</label>
 
         {!selectedRecipient ? (

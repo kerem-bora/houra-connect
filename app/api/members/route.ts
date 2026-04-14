@@ -19,7 +19,7 @@ export async function GET() {
     // 2. Profilleri çek - FID KOLONU BURADAN KALDIRILDI
     const { data: profData, error: profError } = await supabase
       .from('profiles')
-      .select('nick, wallet_address'); // username de sildiysek sadece nick ve wallet_address bırak
+      .select('nick, wallet_address, city');
 
     if (profError) {
       console.error("Profile fetch error:", profError);
@@ -39,7 +39,8 @@ export async function GET() {
         // fid: p?.fid, <--- BU SATIR SİLİNDİ (Hata kaynağı buydu)
         profiles: p ? { 
           nick: p.nick,
-          display_name: p.nick || "Anonymous" 
+          display_name: p.nick || "Anonymous",
+          city: p.city ?? null
         } : null
       };
     });

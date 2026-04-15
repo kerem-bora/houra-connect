@@ -171,11 +171,8 @@ export default function Home() {
   // ---------------------------------------------------------------------------
 
   const handleConnectWallet = () => {
-    if (connectors.length === 1) {
-      connect({ connector: connectors[0] });
-    } else {
-      setShowWalletModal(true);
-    }
+    const injected = connectors.find((c) => c.id === "injected") ?? connectors[0];
+    if (injected) connect({ connector: injected });
   };
 
   // ---------------------------------------------------------------------------

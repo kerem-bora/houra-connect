@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { getSession } from "@/lib/getSession";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -21,7 +20,7 @@ const NeedSchema = z.object({
     .max(280)
     .transform(val => val.trim().replace(/<[^>]*>/g, "")),
   price: z.coerce.string().default("1"),
-
+  wallet_address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
 });
 
 export async function GET() {
@@ -40,13 +39,6 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-
-    const session = await getSession();
-    if (!session.isLoggedIn || !session.address) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const wallet_address = session.address;
-
     const body = await req.json();
     const validation = NeedSchema.safeParse(body);
 
@@ -54,11 +46,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
-    const { location, text, price } = validation.data;
+    const { location, text, price, wallet_address } = validation.data;
 
     const { count } = await supabase.from('needs')
       .select('*', { count: 'exact', head: true })
-      .eq('wallet_address', wallet_address)
+      .eq('wallet_address', wallet_address.toLowerCase())
       .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
     if (count !== null && count >= 3) {
@@ -69,7 +61,7 @@ export async function POST(req: Request) {
       location,
       text,
       price,
-      wallet_address,
+      wallet_address: wallet_address.toLowerCase(),
       id: crypto.randomUUID()
     }]);
 
@@ -84,24 +76,18 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
- 
-    const session = await getSession();
-    if (!session.isLoggedIn || !session.address) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const wallet_address = session.address;
-
     const { searchParams } = new URL(req.url);
     const idValue = searchParams.get('id');
+    const body = await req.json();
 
-    if (!idValue) {
+    if (!idValue || !body.address) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
     const { error } = await supabase.from('needs')
       .delete()
       .eq('id', idValue)
-      .eq('wallet_address', wallet_address);
+      .eq('wallet_address', body.address.toLowerCase());
 
     if (error) throw error;
 

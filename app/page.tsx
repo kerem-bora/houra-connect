@@ -7,7 +7,6 @@ import {
   useWriteContract,
   useAccount,
   useConnect,
-  useSignMessage,
 } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 
@@ -129,28 +128,7 @@ export default function Home() {
   // --- WALLET ---
   const { address: currentAddress, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
-  const { writeContractAsync } = useWriteContract();
-const { signMessageAsync } = useSignMessage(); 
-
-useEffect(() => {
-  if (!isConnected || !currentAddress) return;
-
-  const login = async () => {
-    try {
-      const message = `Houra is connecting \nAddress: ${currentAddress}\nTime: ${Date.now()}`;
-      const signature = await signMessageAsync({ message });
-      await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: currentAddress, message, signature }),
-      });
-    } catch (e) {
-      console.error("Login failed:", e);
-    }
-  };
-
-  login();
-}, [isConnected, currentAddress]);
+  const { writeContractAsync } = useWriteContract(); // replaces useSendCalls
 
   // --- UI STATE ---
   const [isLoading, setIsLoading]             = useState(true);
@@ -349,6 +327,7 @@ useEffect(() => {
         body: JSON.stringify({
           location:       needLocation || "Global",
           text:           needText,
+          wallet_address: currentAddress.toLowerCase(),
           price:          needPrice.toString(),
         }),
       });
@@ -376,6 +355,7 @@ useEffect(() => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          address: currentAddress.toLowerCase(),
           nick:    nickname,
           city:    location,
           talents: offer,
@@ -400,6 +380,8 @@ useEffect(() => {
       setStatus("Deleting…");
       const res = await fetch(`/api/needs?id=${id}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: currentAddress.toLowerCase() }),
       });
       const data = await res.json();
 

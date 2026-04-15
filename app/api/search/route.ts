@@ -11,11 +11,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
 
-    if (!query || query.trim().length < 2) {
-      return NextResponse.json({ users: [] });
-    }
-
-    const searchTerm = query.trim();
+const searchTerm = query.trim().replace(/[%_\\(),"']/g, "");
+if (searchTerm.length < 2) return NextResponse.json({ users: [] });
 
     const { data, error } = await supabase
       .from('profiles')
@@ -37,7 +34,7 @@ export async function GET(req: Request) {
   } catch (error: any) {
     console.error("Search API Failure:", error);
     return NextResponse.json(
-      { error: "Search failed", details: error.message },
+      { error: "Search failed"},
       { status: 500 }
     );
   }

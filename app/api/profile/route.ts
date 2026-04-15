@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { getSession } from "@/lib/getSession"; // ✅ YENİ
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-
 const ProfileSchema = z.object({
-  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  // ✅ address artık schema'da yok, session'dan geliyor
   nick: z.string().optional().nullable().transform(val => val?.trim() || null),
   city: z
     .string()
@@ -25,27 +25,31 @@ const ProfileSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    // ✅ Adresi session'dan al, client'a güvenme
+    const session = await getSession();
+    if (!session.isLoggedIn || !session.address) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const address = session.address;
 
+    const body = await req.json();
     const validation = ProfileSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
     }
 
-    const { address, nick, city, talents } = validation.data;
-
+    const { nick, city, talents } = validation.data;
 
     const { error: dbError } = await supabase
       .from('profiles')
       .upsert({
-        wallet_address: address.toLowerCase(), 
-        nick: nick,
-        city: city,
-        bio: talents, 
-      }, { onConflict: 'wallet_address' }); 
+        wallet_address: address, // session'dan geliyor
+        nick,
+        city,
+        bio: talents,
+      }, { onConflict: 'wallet_address' });
 
     if (dbError) {
-      // PostgreSQL unique constraint violation
       if (dbError.code === "23505" && dbError.message.includes("nick")) {
         return NextResponse.json(
           { error: "This username is already taken." },
@@ -76,12 +80,12 @@ export async function GET(req: Request) {
 
       if (error) throw error;
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         profiles: profiles.map(p => ({
           ...p,
-          talents: p.bio, 
-          display_name: p.nick || "Anonymous" 
-        })) 
+          talents: p.bio,
+          display_name: p.nick || "Anonymous"
+        }))
       });
     }
 
@@ -89,16 +93,16 @@ export async function GET(req: Request) {
       .from('profiles')
       .select('*')
       .eq('wallet_address', address.toLowerCase())
-      .maybeSingle(); 
+      .maybeSingle();
 
     if (error) throw error;
-    
-    return NextResponse.json({ 
-      profile: data ? { 
-        ...data, 
+
+    return NextResponse.json({
+      profile: data ? {
+        ...data,
         talents: data.bio,
-        display_name: data.nick || "Anonymous" 
-      } : null 
+        display_name: data.nick || "Anonymous"
+      } : null
     });
   } catch (error: any) {
     console.error("Profile GET Error:", error);
